@@ -7,8 +7,11 @@
 
 #include <xc.h>
 
-/************************** PUBLIC FUNCTION **************************/
-void GPIO_init();
+
+void GPIO_init();           // Инициализация и настройка портов ввода/вывода
+void PWM_init();            // Инициализация PWM
+void interrupt_INT0_init(); // Инициализация и разрешение прерывания от INT0
+
 
 #endif	/* HARD_H */
 
