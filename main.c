@@ -47,6 +47,7 @@
 void main(void) 
 {
     GPIO_init();
+    motor_init();
     uint8_t a = 5;
     return;
 }
