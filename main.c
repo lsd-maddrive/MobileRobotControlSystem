@@ -1,14 +1,6 @@
 /*
- * File:   newmain.c
- * Author: user
- *
- * Created on 4 апреля 2018 г., 11:03
+ * File:   main.c
  */
-
-
-// DSPIC33FJ256MC710 Configuration Bit Settings
-
-// 'C' source line config statements
 
 // FBS
 #pragma config BWRP = WRPROTECT_OFF // Boot Segment Write Protect (Boot Segment may be written)
@@ -49,13 +41,12 @@
 #pragma config ICS = PGD3 // Comm Channel Select (Communicate on PGC3/EMUC3 and PGD3/EMUD3)
 #pragma config JTAGEN = OFF // JTAG Port Enable (JTAG is Disabled)
 
-
-// #pragma config statements should precede project file includes.
-// Use project enums instead of #define for ON and OFF.
-
 #include <xc.h>
+#include "hard.h"
 
 void main(void) 
 {
+    GPIO_init();
+    uint8_t a = 5;
     return;
 }
