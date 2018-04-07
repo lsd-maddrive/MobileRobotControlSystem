@@ -6,13 +6,75 @@
 #include "motor_control.h"
 
 /*
+* @brief Подать питание на двигатель А
+* @param power - мощность в %
+*/
+void motor_a_set_power(int8_t power)
+{
+    enum
+    {
+        P1DC_MAX = (1 << 15) - 1,
+        P1DC_MIN = 0,
+    };
+    // Вращение в одну сторону
+    if (power > 0)
+    {
+        if (power > 100)
+            power = 100;
+        P1DC1 = P1DC_MAX*(100 - power)/100;
+        P1DC2 = 0;
+    }
+    // Вращение в другую сторону
+    else
+    {
+        if (power < 100)
+            power = 100;
+        else
+            power = -power;
+        P1DC1 = 0;
+        P1DC2 = P1DC_MAX*power/100;
+    }
+}
+
+/*
+* @brief Подать питание на двигатель B
+* @param power - мощность в %
+*/
+void motor_b_set_power(int8_t power)
+{
+    enum
+    {
+        P1DC_MAX = (1 << 15) - 1,
+        P1DC_MIN = 0,
+    };
+    // Вращение в одну сторону
+    if (power > 0)
+    {
+        if (power > 100)
+            power = 100;
+        P1DC3 = P1DC_MAX*(100 - power)/100;
+        P1DC4 = 0;
+    }
+    // Вращение в другую сторону
+    else
+    {
+        if (power < 100)
+            power = 100;
+        else
+            power = -power;
+        P1DC3 = 0;
+        P1DC4 = P1DC_MAX*power/100;
+    }
+}
+
+/*
 * @brief Остановить двигатели
 */
 void motors_stop()
 {
-    P1DC1 = 1 << 16 - 1;
+    P1DC1 = (1 << 15) - 1;
     P1DC2 = 0;
-    P1DC3 = 1 << 16 - 1;
+    P1DC3 = (1 << 15) - 1;
     P1DC4 = 0;
 }
 
@@ -32,14 +94,14 @@ void motor_init()
     P1TCONbits.PTMOD = 0x00;    // PWM MODE: Free Running mode
     P1TMRbits.PTMR = 0;         // PWM time base is counting up
     
-    PWM1CON1bits.PMOD1 = 1;     // PWM1 I/O pin pair is in Independent Output mode
-    PWM1CON1bits.PEN1L = 1;     // PWM1 pin is enabled for PWM output
-    PWM1CON1bits.PMOD2 = 1;     // PWM2 I/O pin pair is in Independent Output mode
-    PWM1CON1bits.PEN2L = 1;     // PWM2 pin is enabled for PWM output
-    PWM1CON1bits.PMOD1 = 1;     // PWM3 I/O pin pair is in Independent Output mode
-    PWM1CON1bits.PEN1L = 1;     // PWM3 pin is enabled for PWM output
-    PWM1CON1bits.PMOD2 = 1;     // PWM4 I/O pin pair is in Independent Output mode
-    PWM1CON1bits.PEN2L = 1;     // PWM4 pin is enabled for PWM output
+    PWM1CON1bits.PMOD1 = 1;     // PWM1 PAIR MODE: Independent Output mode
+    PWM1CON1bits.PEN1L = 1;     // PWM1L (PE0) pin is enabled for PWM output
+    PWM1CON1bits.PMOD2 = 1;     // PWM2 PAIR MODE: Independent Output mode
+    PWM1CON1bits.PEN2L = 1;     // PWM2L (PE2) pin is enabled for PWM output
+    PWM1CON1bits.PMOD1 = 1;     // PWM3 PAIR MODE: Independent Output mode
+    PWM1CON1bits.PEN1L = 1;     // PWM3L (PE4) pin is enabled for PWM output
+    PWM1CON1bits.PMOD2 = 1;     // PWM4 PAIR MODE: Independent Output mode
+    PWM1CON1bits.PEN2L = 1;     // PWM4L (PE6) pin is enabled for PWM output
     
     P1TPERbits.PTPER = PWM_PERIOD;//PWM Time Base Period Value bits (max 32676)
     
