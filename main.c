@@ -41,13 +41,17 @@
 #pragma config ICS = PGD3 // Comm Channel Select (Communicate on PGC3/EMUC3 and PGD3/EMUD3)
 #pragma config JTAGEN = OFF // JTAG Port Enable (JTAG is Disabled)
 
-#include <xc.h>
-#include "hard.h"
+#define _XTAL_FREQ 40000000
 
-void main(void) 
+#include <xc.h>
+#include "motor_control.h"
+#include "encoder.h"
+
+int main(void) 
 {
     GPIO_init();
     motor_init();
-    uint8_t a = 5;
-    return;
+    encoder_init();
+    //__delay_ms(100);
+    return 0;
 }

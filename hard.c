@@ -6,13 +6,20 @@
 
 /*
 * @brief Инициализация портов ввода/вывода
+* @note TRISx - регистр направления порта
+* @note PORTx - регистр чтения/записи 
 */
 void GPIO_init()
 {
-    // Регистр направления порта:
-    TRISA &= ~0x01;         // PORTA1 - output
-    // Регистр чтения/записи
-    PORTA |= 0x01;          // PORTA1 - Высокий уровень
+    // A0
+    TRISA &= ~(1 << 0);         // PORTA0 - output
+    PORTA |= (1 << 0);          // PORTA0 - Высокий уровень
+
+    
+    // INT0 - RF6
+    TRISA |= (1 << 6) |         // PORTF6 - input (encoder - INT0)
+             (1 << 7);          // PORTF7 - input (encoder)
+    
 }
 
 
