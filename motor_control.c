@@ -11,11 +11,6 @@
 */
 void motor_a_set_power(int8_t power)
 {
-    enum
-    {
-        P1DC_MAX = (1 << 15) - 1,
-        P1DC_MIN = 0,
-    };
     // Вращение в одну сторону
     if (power > 0)
     {
@@ -42,11 +37,6 @@ void motor_a_set_power(int8_t power)
 */
 void motor_b_set_power(int8_t power)
 {
-    enum
-    {
-        P1DC_MAX = (1 << 15) - 1,
-        P1DC_MIN = 0,
-    };
     // Вращение в одну сторону
     if (power > 0)
     {
@@ -83,13 +73,6 @@ void motors_stop()
 */
 void motor_init()
 {
-    enum
-    {
-        CLOCK_FREQUENCY = 16000000,
-        PWM_FREQUENCY = 16000,
-        PRM_PRESCALER = 1,
-        PWM_PERIOD = CLOCK_FREQUENCY/( PWM_FREQUENCY * PRM_PRESCALER) - 1  // max 32767
-    };
     P1TCONbits.PTCKPS = 0x00;   // PWM PRESCALER (1:1 prescale)
     P1TCONbits.PTMOD = 0x00;    // PWM MODE: Free Running mode
     P1TMRbits.PTMR = 0;         // PWM time base is counting up

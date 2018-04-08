@@ -26,7 +26,5 @@ enum
 static int16_t angle_of_encoder;
 
 void encoder_init(void);
-void __attribute__((__interrupt__)) encoder_interrupt(void);
-
 #endif	/* ENCODER_H */
 
