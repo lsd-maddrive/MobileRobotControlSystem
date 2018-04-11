@@ -63,3 +63,11 @@ void TIM23_init()
     T1CONbits.TCKPS = 3;    // Timer1 prescale 1:256  
     T1CONbits.TON = 1;      // Enable Timer1 and start the counter
 }
+
+/*
+* @brief Вернуть время таймера 23
+*/
+uint32_t return_time_of_TIM23()
+{
+    return (TMR3 << 16) + TMR2;
+}
