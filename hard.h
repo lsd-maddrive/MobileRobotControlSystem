@@ -7,6 +7,7 @@
 
 #include <xc.h>
 
+static uint8_t numberOfOverflows = 0;// Кол-во переполнений таймера23
 
 void GPIO_init();                   // Инициализация и настройка портов ввода/вывода
 void PWM_init();                    // Инициализация PWM

@@ -52,16 +52,33 @@ void TIM23_init()
     T3CON = 0;              // Stop any operations slave Timer3
     
     T2CONbits.T32= 1;       // Enable 32-bit mode
-    T2CONbits.TCKPS = 3;    // Timer2 prescale 1:256  
+    T2CONbits.TCKPS = 1;    // Timer2 prescale 1:8  
     TMR2 =  0x0000;         // Clear least significant half word
     TMR3 =  0x0000;         // Clear most significant half word
     PR2 = 0xFFFFFFFF;       // Timer23 period register
     
-    T2CONbits.TON = 1;
-    T3CONbits.TON = 1;
+    IPC1bits.T2IP = 0x01;   // Set priority level of interrupt = 1
+    IFS0bits.T2IF = 0;      // Clear the Timer2 interrupt status flag
+    IEC0bits.T2IE = 1;      // Enable Timer2 interrupts
     
-    T1CONbits.TCKPS = 3;    // Timer1 prescale 1:256  
-    T1CONbits.TON = 1;      // Enable Timer1 and start the counter
+    T2CONbits.TON = 1;      // Enable Timer2
+    T3CONbits.TON = 1;      // Enable Timer3
+    
+}
+
+/*
+* @brief Прерывание по переполнению таймера23
+*/
+void __attribute__((interrupt,no_auto_psv)) _T2Interrupt( void )
+{
+    IFS0bits.T1IF = 0;      // Очистка флага прерывания
+    T2CONbits.TON = 0;      // Выключение таймера
+    T3CONbits.TON = 0;      // Выключение таймера
+    
+   	numberOfOverflows++;
+    
+    T3CONbits.TON = 1;      // Включение таймера
+	T2CONbits.TON = 1;      // Включение таймера
 }
 
 /*
