@@ -8,10 +8,11 @@
 #include <xc.h>
 
 
-void GPIO_init();           // Инициализация и настройка портов ввода/вывода
-void PWM_init();            // Инициализация PWM
-void interrupt_INT0_init(); // Инициализация и разрешение прерывания от INT0
-
+void GPIO_init();               // Инициализация и настройка портов ввода/вывода
+void PWM_init();                // Инициализация PWM
+void interrupt_INT0_init();     // Инициализация и разрешение прерывания от INT0
+void TIM23_init();              // Инициализация таймера 23
+void return_time_of_TIM23();    // Вернуть время таймера 23
 
 #endif	/* HARD_H */
 
