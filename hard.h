@@ -9,10 +9,12 @@
 
 enum
 {
-    MOTOR_A_1,
-    MOTOR_A_2,
-    MOTOR_B_1,
-    MOTOR_B_2,
+    MOTOR_LEFT, 
+    MOTOR_LEFT_1,
+    MOTOR_LEFT_2,
+    MOTOR_RIGHT,
+    MOTOR_RIGHT_1,
+    MOTOR_RIGHT_2,
 };
 
 enum

@@ -54,16 +54,16 @@ int main(void)
     encoder_init();
     //__delay_ms(100);
     uint32_t count = 0;
-    motor_a_set_power(10);
-    motor_b_set_power(10);
+    motor_set_power(10, MOTOR_LEFT);
+    motor_set_power(10, MOTOR_RIGHT);
     while(1)
     {
-        motor_a_set_power(10);
-        motor_b_set_power(10);
+        motor_set_power(10, MOTOR_LEFT);
+        motor_set_power(10, MOTOR_RIGHT);
         for(count = 0; count < 10000000; count++);
         
-        //motor_a_set_power(-90);
-        //motor_b_set_power(-90);
+        //motor_set_power(-90, MOTOR_LEFT);
+        //motor_set_power(-90, MOTOR_RIGHT);
         //for(count = 0; count < 10000000; count++);
     }
     return 0;

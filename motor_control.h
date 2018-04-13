@@ -9,8 +9,7 @@
 #include "hard.h"
 
 /************************** PUBLIC FUNCTION **************************/
-void motor_a_set_power(int8_t power);
-void motor_b_set_power(int8_t power);
+void motor_set_power(int8_t power, uint8_t motor);
 void motors_stop();
 void motor_init();
 
