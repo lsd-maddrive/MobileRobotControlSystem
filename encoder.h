@@ -1,4 +1,4 @@
-/* 
+ /* 
  * File:   encoder.h
  */
 
@@ -23,7 +23,7 @@ enum
     NEGATIVE_EDGE = 1
 };
 /************************** PUBLIC FUNCTION **************************/
-static int16_t angle_of_encoder;
+volatile static int16_t angle_of_encoder;
 
 void encoder_init(void);
 #endif	/* ENCODER_H */

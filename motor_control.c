@@ -16,8 +16,8 @@ void motor_a_set_power(int8_t power)
     {
         if (power > 100)
             power = 100;
-        P1DC1 = P1DC_MAX*(100 - power)/100;
-        P1DC2 = 0;
+        PWM_set(power, MOTOR_A_1);
+        PWM_set(0, MOTOR_A_2);
     }
     // Вращение в другую сторону
     else
@@ -26,8 +26,8 @@ void motor_a_set_power(int8_t power)
             power = 100;
         else
             power = -power;
-        P1DC1 = 0;
-        P1DC2 = P1DC_MAX*power/100;
+        PWM_set(0, MOTOR_A_1);
+        PWM_set(power, MOTOR_A_2);
     }
 }
 
@@ -42,7 +42,7 @@ void motor_b_set_power(int8_t power)
     {
         if (power > 100)
             power = 100;
-        P1DC3 = P1DC_MAX*(100 - power)/100;
+        P1DC3 = P1DC_MAX/100*(100 - power);
         P1DC4 = 0;
     }
     // Вращение в другую сторону
@@ -53,7 +53,7 @@ void motor_b_set_power(int8_t power)
         else
             power = -power;
         P1DC3 = 0;
-        P1DC4 = P1DC_MAX*power/100;
+        P1DC4 = P1DC_MAX/100*power;
     }
 }
 

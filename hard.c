@@ -31,6 +31,33 @@ void PWM_init()
     
 }
 
+void PWM_set(uint8_t duty_cycle, uint8_t pin)
+{
+    switch(pin)
+    {
+        case MOTOR_A_1:
+        {
+            P1DC1 = PWM_PERIOD*(100UL - duty_cycle)/100 << 1;
+            break;
+        }
+        case MOTOR_A_2:
+        {
+            P1DC2 = PWM_PERIOD*(100 - duty_cycle)/100 << 1;
+            break;
+        }
+        case MOTOR_B_1:
+        {
+            P1DC3 = PWM_PERIOD*(100 - duty_cycle)/100 << 1;
+            break;
+        }
+        case MOTOR_B_2:
+        {
+            P1DC4 = PWM_PERIOD*(100 - duty_cycle)/100 << 1;
+            break;
+        }
+    }
+                
+}
 
 /*
 * @brief Инициализация внешнего прерывание от источника INT0
