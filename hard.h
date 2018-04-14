@@ -27,14 +27,33 @@ enum
     P1DC_MIN = 0,        
 };
 
-static uint8_t numberOfOverflows = 0;// Кол-во переполнений таймера23
+#define ENCODER_PIN1 PORTFbits.RF6
+#define ENCODER_PIN2 PORTFbits.RF7
+#define ENCODER_TYPE_OF_INTERRUPT INTCON2 & ~(1 << 0)
+enum
+{
+    ENCODER_POSITIVE_EDGE = ~1,
+    ENCODER_NEGATIVE_EDGE = 1
+};
 
 void GPIO_init();                   // Инициализация и настройка портов ввода/вывода
+
+/**************************** MOTOR_CONTROL (PWM) ****************************/
 void PWM_init();                    // Инициализация PWM
 void PWM_set(uint8_t, uint8_t);     // PWM установка скважности для указанной ножки
-void interrupt_INT0_init();         // Инициализация и разрешение прерывания от INT0
-void TIM23_init();                  // Инициализация таймера 23
-uint32_t return_time_of_TIM23();    // Вернуть время таймера 23
+/**************************** MOTOR_CONTROL (PWM) ****************************/
+
+/******************************* ENCODER (INT0) *******************************/
+void interrupt_INT0_init();             // Инициализация и разрешение прерывания
+inline void change_type_of_interrupt(); // Изменить тип прерывания
+inline void reset_interrupt_flag();     // Обнулить флаг прерывания
+/******************************* ENCODER (INT0) *******************************/
+
+/************************** SOFTWARE TIMER (TIM23)  **************************/
+static uint8_t numberOfOverflows = 0;   // Кол-во переполнений таймера23
+void TIM23_init();                      // Инициализация таймера 23
+uint32_t return_time_of_TIM23();        // Вернуть время таймера 23
+/************************** SOFTWARE TIMER (TIM23)  **************************/
 
 #endif	/* HARD_H */
 

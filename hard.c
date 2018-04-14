@@ -15,7 +15,6 @@ void GPIO_init()
     TRISA &= ~(1 << 0);         // PORTA0 - output
     PORTA |= (1 << 0);          // PORTA0 - Высокий уровень
 
-    
     // INT0 - RF6
     TRISA |= (1 << 6) |         // PORTF6 - input (encoder - INT0)
              (1 << 7);          // PORTF7 - input (encoder)
@@ -82,6 +81,25 @@ void interrupt_INT0_init()
     INTCON2 &= ~0x0001;     // INT0 setup to interupt on rising edge
     IFS0bits.INT0IF = 0;    // INT0 reset interrupt flag 
     IEC0bits.INT0IE = 1;    // INT0 interupt enable
+}
+
+/*
+* @brief Меняет тип прерывания от INT0: с прерывания по верхнему уровню на нижний и наоборот
+*/
+void change_type_of_interrupt()
+{
+    if (ENCODER_TYPE_OF_INTERRUPT == ENCODER_POSITIVE_EDGE)
+        INTCON2 |= ENCODER_NEGATIVE_EDGE;
+    else
+        INTCON2 &= ENCODER_POSITIVE_EDGE;
+}
+
+/*
+* @brief Обнуляет флаг прерывания от INT0
+*/
+void reset_interrupt_flag()
+{
+    IFS0bits.INT0IF = 0;
 }
 
 /*

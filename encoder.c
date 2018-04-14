@@ -12,30 +12,27 @@ void encoder_init()
     interrupt_INT0_init();
 }
 
-
 /*
 * @brief Прерывание от энкодера (INT0)
 */
 void __attribute__((__interrupt__)) encoder_interrupt(void)
 {
-    // ПОП обработки прерывания
-    
-    if (TYPE_OF_INTERRUPT == POSITIVE_EDGE)
+    if (ENCODER_TYPE_OF_INTERRUPT == ENCODER_POSITIVE_EDGE)
     {
-        INTCON2 |= NEGATIVE_EDGE;
-        if (PIN2 == 1)
+        change_type_of_interrupt();
+        if (ENCODER_PIN2 == 1)
             angle_of_encoder++;
         else
             angle_of_encoder--;
     }
     else
     {
-        INTCON2 &= POSITIVE_EDGE;
-        if (PIN2 == 1)
-            angle_of_encoder++;
-        else
+        change_type_of_interrupt();
+        if (ENCODER_PIN2 == 1)
             angle_of_encoder--;
+        else
+            angle_of_encoder++;
     }
     
-    IFS0bits.INT0IF = 0;    // INT0 reset interrupt flag 
+    reset_interrupt_flag();
 }

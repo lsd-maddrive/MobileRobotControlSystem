@@ -14,14 +14,6 @@
 // Нужно внешнее прерывание на изменение уровня одной из ножек
 // Во время прерывания проверяем вторую ногу
 
-#define PIN1 PORTFbits.RF6
-#define PIN2 PORTFbits.RF7
-#define TYPE_OF_INTERRUPT INTCON2 & ~(1 << 0)
-enum
-{
-    POSITIVE_EDGE = ~1,
-    NEGATIVE_EDGE = 1
-};
 /************************** PUBLIC FUNCTION **************************/
 volatile static int16_t angle_of_encoder;
 
