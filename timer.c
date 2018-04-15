@@ -11,7 +11,7 @@
 */
 Timer* create_timer()
 {
-    Timer* ptrTimer = malloc( sizeof(*ptrTimer) );
+    Timer* ptrTimer = (Timer*) malloc(1);
     ptrTimer->status = CREATED;
     return ptrTimer;
 }
@@ -30,20 +30,21 @@ void delete_timer(Timer* ptrTimer)
  * param timer - указатель на объект структуры Timer
  * param time_us - время, которое будет отсчитывать таймер, в мкс
 */
-void start_timer_us(Timer* ptrTimer, uint32_t time_us)
+void start_timer_us(Timer* ptrTimer, uint16_t time_us)
 {
     if (time_us != 0)
     {
-        // Инициализация объекта текущим временем и задержкой
-        ptrTimer->fixedTime = return_time_of_TIM23();
-        ptrTimer->restTime = time_us;
+        // Инициализация объекта текущим временем
+        ptrTimer->startCount = return_time_of_TIM23();
+        ptrTimer->startOverflows = TIM23NumberOfOverflows;
+        // Инициализация объекта оставшимся временем до срабатывания таймера
+        ptrTimer->restCount = time_us << US_TO_COUNT_LSHIFT;
+        ptrTimer->restOverflows = 0;
+        // Инициализация объекта временем срабатывания таймера
+        ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
+        ptrTimer->endOverflows = ( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount) ? 1:0;
+        
         ptrTimer->status = WORKING;
-        ptrTimer->fixedNumberOfOverflowsTM23 = numberOfOverflows;
-        // Проверка на переполнение конечного времени
-        if ( (ptrTimer->fixedTime + ptrTimer->restTime) < ptrTimer->fixedTime)
-            ptrTimer->isEndTimeFull = 1;
-        else
-            ptrTimer->isEndTimeFull = 0;
     }
     else
     {
@@ -56,19 +57,26 @@ void start_timer_us(Timer* ptrTimer, uint32_t time_us)
  * param timer - указатель на объект структуры Timer
  * param time_us - время, которое будет отсчитывать таймер, в мкс
 */
-void start_timer_ms(Timer* ptrTimer, uint32_t time_ms)
+void start_timer_ms(Timer* ptrTimer, uint16_t time_ms)
 {
+    enum 
+    {
+        MS_TO_US = 1000,
+        COUNT_IN_MS = 1000*US_IN_COUNT,
+    };
     if (time_ms != 0)
     {
-        // Инициализация объекта текущим временем и задержкой
-        ptrTimer->fixedTime = return_time_of_TIM23();
-        ptrTimer->restTime = 1000*time_ms; // переполнение нестрашно
+        // Инициализация объекта текущим временем
+        ptrTimer->startCount = return_time_of_TIM23();
+        ptrTimer->startOverflows = TIM23NumberOfOverflows;
+        // Инициализация объекта оставшимся временем до срабатывания таймера
+        ptrTimer->restCount = time_ms * COUNT_IN_MS;
+        ptrTimer->restOverflows = 0;
+        // Инициализация объекта временем срабатывания таймера
+        ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
+        ptrTimer->endOverflows = ( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount) ? 1:0;
+        
         ptrTimer->status = WORKING;
-        // Проверка на переполнение конечного времени
-        if ( (ptrTimer->fixedTime + ptrTimer->restTime) < ptrTimer->fixedTime)
-            ptrTimer->isEndTimeFull = 1;
-        else
-            ptrTimer->isEndTimeFull = 0;
     }
     else
     {
@@ -82,59 +90,12 @@ void start_timer_ms(Timer* ptrTimer, uint32_t time_ms)
 */
 uint8_t report_timer(Timer* ptrTimer)
 {
-    uint32_t timeNow = return_time_of_TIM23();
-    // Если таймер мк не переполнился
-    if (ptrTimer->fixedNumberOfOverflowsTM23 == numberOfOverflows)
+    uint32_t nowCount = return_time_of_TIM23();
+    // Если время вышло
+    if ( (ptrTimer->endOverflows < TIM23NumberOfOverflows) || 
+         ( (ptrTimer->endOverflows == TIM23NumberOfOverflows) && (ptrTimer->endCount <= nowCount) ) )
     {
-        // Если конечное время не переполнено
-        if (!ptrTimer->isEndTimeFull)
-        {
-            // Если время еще не наступило
-            if ( (ptrTimer->fixedTime + ptrTimer->restTime) < timeNow )
-            {
-                ptrTimer->restTime = timeNow - ptrTimer->fixedTime;
-                ptrTimer->fixedTime = timeNow;
-            }
-            // Если время пришло
-            else
-            {
-                ptrTimer->restTime = 0;
-                ptrTimer->status = FINISHED;
-            }
-        }
-        // Если конечное время переполнено
-        else
-        {
-            ptrTimer->restTime = timeNow - ptrTimer->fixedTime;
-            ptrTimer->fixedTime = timeNow;
-        }
-    }
-    // Если таймер мк переполнился
-    else
-    {
-        // Если конечное время не переполнено
-        if (!ptrTimer->isEndTimeFull)
-        {
-            ptrTimer->restTime = 0;
-            ptrTimer->status = FINISHED;
-        }
-        // Если конечное время переполнено
-        else
-        {
-            ptrTimer->isEndTimeFull = 0;
-            // Если время еще не наступило
-            if ( (ptrTimer->fixedTime + ptrTimer->restTime) < timeNow )
-            {
-                ptrTimer->restTime = timeNow - ptrTimer->fixedTime;
-                ptrTimer->fixedTime = timeNow;
-            }
-            // Если время пришло
-            else
-            {
-                ptrTimer->restTime = 0;
-                ptrTimer->status = FINISHED;
-            }
-        }
+        ptrTimer->status = FINISHED;
     }
     return ptrTimer->status;
 }

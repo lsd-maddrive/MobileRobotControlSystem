@@ -10,7 +10,7 @@
  * - Регистр 32 битный
  * - Предделитель 8
  * - 1 тик таймер23 = 0.5 мкс
- * - макс. время до "сбоя" таймера23 = 8 * 2^32 / 16МГц = 2147 сек или 35 мин
+ * - 1 период таймера23 = 2147.48365 сек = 36 минут
  */
 
 #include "hard.h"
@@ -26,22 +26,28 @@ enum TimerStatus
 
 typedef struct 
 {
-    uint32_t fixedTime;     // время старта таймера
-    uint32_t restTime;      // остаток времени
-    uint8_t status;         // статус таймера
-    uint8_t isEndTimeFull;  // факт переполнения конечного времени таймера (fixedTime + restTime >= 2^32)
-    uint8_t fixedNumberOfOverflowsTM23;//завиксированное кол-во переполнений TM23
+    uint32_t startCount;        // начальное состояние счетчика
+    uint8_t  startOverflows;    // начальное кол-во переполнений счетчика
+    
+    uint32_t restCount;         // осталось тиков счетчика
+    uint8_t  restOverflows;     // осталось переполнений счетчика
+    
+    uint32_t endCount;          // конечное состояние счетчика
+    uint8_t  endOverflows;      // конечное кол-во переполнений таймера
+    
+    uint8_t  status;            // статус таймера
 } Timer;
+
 Timer* create_timer();                  // конструктор
-void delete_timer(Timer*);               // деструктор
+void delete_timer(Timer*);              // деструктор
 
-void start_timer_us(Timer*, uint32_t);   // начать отчет времени в мкс
-void start_timer_ms(Timer*, uint32_t);   // начать отчет времени в мс
-void continue_timer(Timer*);             // продолжить отчет времени
-void wait_timer(Timer*);                 // сделать паузу
-void stop_timer(Timer*);                 // полностью остановить таймер
+void start_timer_us(Timer*, uint16_t);  // начать отчет времени в мкс
+void start_timer_ms(Timer*, uint16_t);  // начать отчет времени в мс
+void continue_timer(Timer*);            // продолжить отчет времени
+void wait_timer(Timer*);                // сделать паузу
+void stop_timer(Timer*);                // полностью остановить таймер
 
-uint8_t report_timer(Timer*);            // вернуть статус таймера
+uint8_t report_timer(Timer*);           // вернуть статус таймера
 
 #endif	/* SOFTWARE_TIMER_H */
 
