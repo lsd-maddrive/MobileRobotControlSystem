@@ -51,9 +51,9 @@ int main(void)
     while(1)
     {
         test_motor_control();
-        //test_uart();
+        test_uart();
+        test_software_timer();
         //test_encoder();
-        //test_software_timer();
         //test_range_finder();
     }
     return 0;
