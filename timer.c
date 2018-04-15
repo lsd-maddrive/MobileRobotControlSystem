@@ -5,6 +5,24 @@
 #include <xc.h>
 #include "timer.h"
 
+/****************************** PRIVATE FUNCTION ******************************/
+/* 
+ * @brief Возвращает true, если время пришло, в противном случае false
+ * @return возвращает указатель на объейкт структуры Timer
+*/
+inline uint8_t is_timer_end(Timer* ptrTimer, uint32_t nowCount)
+{
+    if ( (ptrTimer->endOverflows < TIM23NumberOfOverflows) || 
+         ( (ptrTimer->endOverflows == TIM23NumberOfOverflows) && (ptrTimer->endCount <= nowCount) ) )
+        return 1;
+    return 0;
+}
+/****************************** PRIVATE FUNCTION ******************************/
+
+
+
+/****************************** PUBLIC FUNCTION *******************************/
+
 /* 
  * @brief Создание таймера (конструктор)
  * @return возвращает указатель на объейкт структуры Timer
@@ -91,11 +109,28 @@ void start_timer_ms(Timer* ptrTimer, uint16_t time_ms)
 uint8_t report_timer(Timer* ptrTimer)
 {
     uint32_t nowCount = return_time_of_TIM23();
-    // Если время вышло
-    if ( (ptrTimer->endOverflows < TIM23NumberOfOverflows) || 
-         ( (ptrTimer->endOverflows == TIM23NumberOfOverflows) && (ptrTimer->endCount <= nowCount) ) )
+    if ( ptrTimer->status == WORKING && is_timer_end(ptrTimer, nowCount) )
     {
         ptrTimer->status = FINISHED;
     }
     return ptrTimer->status;
 }
+
+/*
+ * @brief Возвращает оставшееся время работы таймера
+ * @param timer - указатель на объект структуры Timer
+ * @return оставшееся время работы таймера в мкс
+*/
+uint16_t get_rest_time(Timer* ptrTimer)
+{
+    uint32_t nowCount = return_time_of_TIM23();
+    // Если время вышло
+    if ( ptrTimer->status == WORKING && is_timer_end(ptrTimer, nowCount) )
+    {
+        ptrTimer->restCount = 0;
+        ptrTimer->restOverflows = 0;
+        ptrTimer->status = FINISHED;
+    }
+    return ( ptrTimer->restCount << 2 );
+}
+/****************************** PUBLIC FUNCTION *******************************/

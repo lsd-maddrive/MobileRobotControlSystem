@@ -48,6 +48,7 @@ void wait_timer(Timer*);                // сделать паузу
 void stop_timer(Timer*);                // полностью остановить таймер
 
 uint8_t report_timer(Timer*);           // вернуть статус таймера
+uint16_t get_rest_time(Timer*);         // вернуть оставшееся время таймера
 
 #endif	/* SOFTWARE_TIMER_H */
 
