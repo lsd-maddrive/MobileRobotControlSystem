@@ -10,6 +10,7 @@
 #include "hard.h"
 #include "motor_control.h"
 #include "timer.h"
+#include "uart.h"
 
 void init_periphery();          // Инициализация всей переферии
 void test_motor_control();      // Проверка работы модуля motor_control

@@ -12,6 +12,7 @@ void init_periphery()
 {
     GPIO_init();
     motor_init();
+    UART_init(UART_1, UART_BAUD_RATE_9600);
     encoder_init();
     //software_timer_init();
     //findranger_init();

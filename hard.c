@@ -88,7 +88,7 @@ void interrupt_INT0_init()
 */
 void change_type_of_interrupt()
 {
-    if (ENCODER_TYPE_OF_INTERRUPT == ENCODER_POSITIVE_EDGE)
+    if ( (ENCODER_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
         INTCON2 |= ENCODER_NEGATIVE_EDGE;
     else
         INTCON2 &= ENCODER_POSITIVE_EDGE;

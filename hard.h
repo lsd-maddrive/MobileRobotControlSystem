@@ -6,6 +6,13 @@
 #define	HARD_H
 
 #include <xc.h>
+#include <stdlib.h>
+
+enum
+{
+    false = 0,
+    true = 1,
+};
 
 enum
 {
