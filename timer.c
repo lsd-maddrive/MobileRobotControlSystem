@@ -2,7 +2,6 @@
  * File:   timer.c
  */
 
-#include <xc.h>
 #include "timer.h"
 
 /****************************** PRIVATE FUNCTION ******************************/
@@ -22,7 +21,6 @@ inline uint8_t is_timer_end(Timer* ptrTimer, uint32_t nowCount)
 
 
 /****************************** PUBLIC FUNCTION *******************************/
-
 /* 
  * @brief Создание таймера (конструктор)
  * @return возвращает указатель на объейкт структуры Timer
@@ -45,7 +43,7 @@ void delete_timer(Timer* ptrTimer)
 
 /*
  * @brief Запуск отчета таймера в мкс
- * param timer - указатель на объект структуры Timer
+ * param ptrTimer - указатель на объект структуры Timer
  * param time_us - время, которое будет отсчитывать таймер, в мкс
 */
 void start_timer_us(Timer* ptrTimer, uint16_t time_us)
@@ -60,7 +58,7 @@ void start_timer_us(Timer* ptrTimer, uint16_t time_us)
         ptrTimer->restOverflows = 0;
         // Инициализация объекта временем срабатывания таймера
         ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
-        ptrTimer->endOverflows = ( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount) ? 1:0;
+        ptrTimer->endOverflows = ( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount ) ? 1:0;
         
         ptrTimer->status = WORKING;
     }
@@ -72,7 +70,7 @@ void start_timer_us(Timer* ptrTimer, uint16_t time_us)
 
 /*
  * @brief Запуск отчета таймера в мс
- * param timer - указатель на объект структуры Timer
+ * param ptrTimer - указатель на объект структуры Timer
  * param time_us - время, которое будет отсчитывать таймер, в мкс
 */
 void start_timer_ms(Timer* ptrTimer, uint16_t time_ms)

@@ -1,9 +1,9 @@
 /* 
- * File:   software_timer.h
+ * File:   soft_timer.h
  */
 
-#ifndef SOFTWARE_TIMER_H
-#define	SOFTWARE_TIMER_H
+#ifndef SOFT_TIMER_H
+#define	SOFT_TIMER_H
 
 /* Некоторые нюансы работы таймера из железа:
  * - Частота мк - 16 МГц
@@ -50,5 +50,5 @@ void stop_timer(Timer*);                // полностью остановит
 uint8_t report_timer(Timer*);           // вернуть статус таймера
 uint16_t get_rest_time(Timer*);         // вернуть оставшееся время таймера
 
-#endif	/* SOFTWARE_TIMER_H */
+#endif	/* SOFT_TIMER_H */
 

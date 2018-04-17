@@ -8,11 +8,11 @@
 #include <xc.h>
 #include <stdlib.h>
 
-enum
+typedef enum
 {
     false = 0,
     true = 1,
-};
+} bool_t;
 
 enum
 {
@@ -47,7 +47,6 @@ enum
 {
     US_IN_COUNT = 2,          // кол-во тактов счетчика в 1 мкс 
     US_TO_COUNT_LSHIFT = 1,   // кол-во тактов счетчика в 1 мкс (для сдвига влево <<)
-
 };
 
 void GPIO_init();                   // Инициализация и настройка портов ввода/вывода

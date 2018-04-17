@@ -2,7 +2,6 @@
  * File:   motor_control.c
  */
 
-#include <xc.h>
 #include "motor_control.h"
 
 /*
