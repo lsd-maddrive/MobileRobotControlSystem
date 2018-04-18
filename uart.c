@@ -13,6 +13,10 @@ enum
 {
     UART_STA_DATA_ACCESS_BIT = (1 << 0),
     UART_STA_BUFFER_FULL_BIT = (1 << 9),
+    UART1_TX_FLAG = (1 << 12),
+    UART1_RX_FLAG = (1 << 11),
+    UART2_TX_FLAG = (1 << 15),
+    UART2_RX_FLAG = (1 << 14),
 };
 
 volatile UART_module UART_module_base[] = 
@@ -21,15 +25,19 @@ volatile UART_module UART_module_base[] =
         .write_big_endian_mode = false, .i_write_head_byte = 0, .i_write_tail_byte = 0, 
         .n_write_bytes_available = 0, .write_overflow = false, .i_read_head_byte = 0,  
         .i_read_tail_byte = 0, .n_read_bytes_available = 0,  .read_overflow = false,
+        
         .reg_mode = &U1RXREG, .reg_status = &U1STA, .reg_receive = &U1RXREG,
-        .reg_transmit = &U1TXREG, .reg_baud_rate = &U1BRG, .reg_interrupt_flag = &IFS0
+        .reg_transmit = &U1TXREG, .reg_baud_rate = &U1BRG, .reg_interrupt_flag = &IFS0,
+        .interrupt_flag_tx_mask = UART1_TX_FLAG, .interrupt_flag_rx_mask = UART1_RX_FLAG
     },
     {
         .write_big_endian_mode = false, .i_write_head_byte = 0, .i_write_tail_byte = 0, 
         .n_write_bytes_available = 0, .write_overflow = false, .i_read_head_byte = 0,  
         .i_read_tail_byte = 0, .n_read_bytes_available = 0,  .read_overflow = false,
+
         .reg_mode = &U2RXREG, .reg_status = &U2STA, .reg_receive = &U2RXREG,
-        .reg_transmit = &U2TXREG, .reg_baud_rate = &U2BRG, .reg_interrupt_flag = &IFS1
+        .reg_transmit = &U2TXREG, .reg_baud_rate = &U2BRG, .reg_interrupt_flag = &IFS1,
+        .interrupt_flag_tx_mask = UART2_TX_FLAG, .interrupt_flag_rx_mask = UART2_RX_FLAG
     }
 };
 

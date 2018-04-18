@@ -45,6 +45,9 @@ void PWM_init()
     P1TCONbits.PTEN = 0x01;     // PWM time base is on
 }
 
+/*
+* @brief Установка скважности PWM
+*/
 void PWM_set(uint8_t duty_cycle, uint8_t pin)
 {
     switch(pin)
