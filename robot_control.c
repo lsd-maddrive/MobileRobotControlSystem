@@ -28,9 +28,13 @@ void test_motor_control()
 {
     enum 
     {
-        NUMBER_OF_SPEED = 14,
+        NUMBER_OF_SPEED = 18,
     };
-    int8_t power[NUMBER_OF_SPEED] = {10, 15, 20, 25, 20, 15, 10, -10, -15, -20, -25, -20, -15, -10};
+    int8_t power[NUMBER_OF_SPEED] = 
+    {
+         9,  18,  24,  28,  30,  28,  24,  18,  9, 
+        -9, -18, -24, -28, -30, -28, -24, -18, -9
+    };
     uint32_t countOfDelay;
     uint32_t countOfSpeed;
     for (countOfSpeed = 0; countOfSpeed < NUMBER_OF_SPEED; countOfSpeed++) 
