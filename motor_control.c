@@ -22,7 +22,7 @@ void motor_set_power(int8_t power, uint8_t motor)
     // Вращение в другую сторону
     else
     {
-        if (power < 100)
+        if (power < -100)
             power = 100;
         else
             power = -power;

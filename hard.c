@@ -51,22 +51,22 @@ void PWM_set(uint8_t duty_cycle, uint8_t pin)
     {
         case MOTOR_LEFT_1:
         {
-            P1DC1 = PWM_PERIOD*(100UL - duty_cycle)/100 << 1;
+            PDC1 = PWM_PERIOD*(100UL - duty_cycle)/100 << 1;
             break;
         }
         case MOTOR_LEFT_2:
         {
-            P1DC2 = PWM_PERIOD*(100 - duty_cycle)/100 << 1;
+            PDC2 = PWM_PERIOD*(100UL - duty_cycle)/100 << 1;
             break;
         }
         case MOTOR_RIGHT_1:
         {
-            P1DC3 = PWM_PERIOD*(100 - duty_cycle)/100 << 1;
+            PDC3 = PWM_PERIOD*(100UL - duty_cycle)/100 << 1;
             break;
         }
         case MOTOR_RIGHT_2:
         {
-            P1DC4 = PWM_PERIOD*(100 - duty_cycle)/100 << 1;
+            PDC4 = PWM_PERIOD*(100UL - duty_cycle)/100 << 1;
             break;
         }
     }

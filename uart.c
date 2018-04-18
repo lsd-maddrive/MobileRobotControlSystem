@@ -40,7 +40,7 @@ volatile UART_module UART_module_base[] =
 UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
 {
     // Проверка корректности аргументов:
-    if ( (numberOfModule != UART_1) || (numberOfModule != UART_2) )
+    if ( (numberOfModule != UART_1) && (numberOfModule != UART_2) )
         return;
     
     UART_module* module = &UART_module_base[numberOfModule];

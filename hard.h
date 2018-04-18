@@ -16,12 +16,12 @@ typedef enum
 
 enum
 {
-    MOTOR_LEFT, 
-    MOTOR_LEFT_1,
-    MOTOR_LEFT_2,
-    MOTOR_RIGHT,
-    MOTOR_RIGHT_1,
-    MOTOR_RIGHT_2,
+    MOTOR_LEFT = 0, 
+    MOTOR_LEFT_1 = MOTOR_LEFT + 1,
+    MOTOR_LEFT_2 = MOTOR_LEFT + 2,
+    MOTOR_RIGHT = 3,
+    MOTOR_RIGHT_1 = MOTOR_RIGHT + 1,
+    MOTOR_RIGHT_2 = MOTOR_RIGHT + 2,
 };
 
 enum

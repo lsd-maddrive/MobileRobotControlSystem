@@ -30,14 +30,14 @@ void test_motor_control()
     {
         NUMBER_OF_SPEED = 14,
     };
-    int8_t power[NUMBER_OF_SPEED] = {10, 20, 30, 50, 30, 20, 10, -10, -20, -30, -50, -30, -20, -10};
+    int8_t power[NUMBER_OF_SPEED] = {10, 15, 20, 25, 20, 15, 10, -10, -15, -20, -25, -20, -15, -10};
     uint32_t countOfDelay;
     uint32_t countOfSpeed;
     for (countOfSpeed = 0; countOfSpeed < NUMBER_OF_SPEED; countOfSpeed++) 
     {
         motor_set_power(power[countOfSpeed], MOTOR_LEFT);
         motor_set_power(power[countOfSpeed], MOTOR_RIGHT);
-        for (countOfDelay = 0; countOfDelay < 10000000; countOfDelay++);
+        for (countOfDelay = 0; countOfDelay < 400000; countOfDelay++);
     }
     motors_stop();
 }
