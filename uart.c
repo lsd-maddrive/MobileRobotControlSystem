@@ -166,7 +166,8 @@ void tx_interrupt_handler( UART_module* module )
             *module->reg_transmit = module->write_buffer[module->i_write_tail_byte++];
             module->n_write_bytes_available--;
             module->write_overflow = false;
-        } else {
+        } else 
+        {
             RESET_REG_BIT( *(module->reg_interrupt_flag), module->interrupt_flag_tx_mask );
             break;
         }

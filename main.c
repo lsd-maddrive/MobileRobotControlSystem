@@ -50,10 +50,10 @@ int main(void)
     init_periphery();
     while(1)
     {
-        test_motor_control();
-        test_uart();
-        test_software_timer();
-        test_encoder();
+        test_motor_control();   // успешно работает
+        test_uart();            // не работают прерывания
+        test_software_timer();  // ?
+        test_encoder();         // ?
         //test_range_finder();
     }
     return 0;

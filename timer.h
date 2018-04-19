@@ -5,14 +5,6 @@
 #ifndef SOFT_TIMER_H
 #define	SOFT_TIMER_H
 
-/* Некоторые нюансы работы таймера из железа:
- * - Частота мк - 16 МГц
- * - Регистр 32 битный
- * - Предделитель 8
- * - 1 тик таймер23 = 0.5 мкс
- * - 1 период таймера23 = 2147.48365 сек = 36 минут
- */
-
 #include "hard.h"
 
 enum TimerStatus
@@ -38,17 +30,17 @@ typedef struct
     uint8_t  status;            // статус таймера
 } Timer;
 
-Timer* create_timer();                  // конструктор
-void delete_timer(Timer*);              // деструктор
+Timer* timer_create();                  // конструктор
+void timer_delete(Timer*);              // деструктор
 
-void start_timer_us(Timer*, uint16_t);  // начать отчет времени в мкс
-void start_timer_ms(Timer*, uint16_t);  // начать отчет времени в мс
-void continue_timer(Timer*);            // продолжить отчет времени
-void wait_timer(Timer*);                // сделать паузу
-void stop_timer(Timer*);                // полностью остановить таймер
+void timer_start_us(Timer*, uint16_t);  // начать отчет времени в мкс
+void timer_start_ms(Timer*, uint16_t);  // начать отчет времени в мс
+void timer_continue(Timer*);            // продолжить отчет времени
+void timer_wait(Timer*);                // сделать паузу
+void timer_stop(Timer*);                // полностью остановить таймер
 
-uint8_t report_timer(Timer*);           // вернуть статус таймера
-uint16_t get_rest_time(Timer*);         // вернуть оставшееся время таймера
+uint8_t timer_report(Timer*);           // вернуть статус таймера
+uint16_t timer_get_rest_time(Timer*);   // вернуть оставшееся время таймера
 
 #endif	/* SOFT_TIMER_H */
 

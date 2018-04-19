@@ -63,9 +63,10 @@ inline void reset_interrupt_flag();     // Обнулить флаг преры�
 /******************************* ENCODER (INT0) *******************************/
 
 /************************** SOFTWARE TIMER (TIM23)  **************************/
-static uint8_t TIM23NumberOfOverflows = 0;  // Кол-во переполнений таймера23
-void TIM23_init();                          // Инициализация таймера 23
-uint32_t return_time_of_TIM23();            // Вернуть время таймера 23
+static uint8_t hardTimerOverflows = 0;
+void hard_timer_init();
+uint32_t hard_timer_return_time();
+uint8_t  hard_timer_return_overflows();
 /************************** SOFTWARE TIMER (TIM23)  **************************/
 
 #endif	/* HARD_H */

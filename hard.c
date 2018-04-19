@@ -15,9 +15,13 @@ void GPIO_init()
     TRISA &= ~(1 << 0);         // PORTA0 - output
     PORTA |= (1 << 0);          // PORTA0 - Высокий уровень
 
-    // INT0 - RF6
-    TRISA |= (1 << 6) |         // PORTF6 - input (encoder - INT0)
-             (1 << 7);          // PORTF7 - input (encoder)
+    // INT1 - RE8; RE9
+    TRISE |= (1 << 8) |         // PORTE8 - input (encoder2 - INT1)
+             (1 << 9);          // PORTE8 - input (encoder2)
+    
+    // INT0 - RF6; RF7
+    TRISF |= (1 << 6) |         // PORTF6 - input (encoder1 - INT0)
+             (1 << 7);          // PORTF7 - input (encoder1)
     
 }
 
@@ -105,11 +109,19 @@ void reset_interrupt_flag()
     IFS0bits.INT0IF = 0;
 }
 
+/* Некоторые нюансы работы аппаратного таймера:
+ * - Частота мк - 16 МГц
+ * - Регистр 32 битный
+ * - Предделитель 8
+ * - 1 тик таймер23 = 0.5 мкс
+ * - 1 период таймера23 = 2147.48365 сек = 36 минут
+ */
+
 /*
-* @brief Инициализация таймер 23
-* @note таймер23 будет использоваться для создания задержки
+* @brief Инициализация аппаратного таймера
+* @note Выбран 32-битный таймер TIM23
 */
-void TIM23_init()
+void hard_timer_init()
 {
     T3CON = 0;              // Stop any operations Timer3
     T2CON = 0;              // Stop any operations Timer2
@@ -137,16 +149,24 @@ void __attribute__((interrupt,no_auto_psv)) _T3Interrupt( void )
     T2CONbits.TON = 0;      // Выключение таймера
     T3CONbits.TON = 0;      // Выключение таймера
     
-   	TIM23NumberOfOverflows++;
+   	hardTimerOverflows++;
     
     T3CONbits.TON = 1;      // Включение таймера
 	T2CONbits.TON = 1;      // Включение таймера
 }
 
 /*
-* @brief Вернуть время таймера 23
+* @brief Вернуть кол-во прерываний аппаратного таймера
 */
-uint32_t return_time_of_TIM23()
+uint8_t hard_timer_return_overflows()
+{
+    return hardTimerOverflows;
+}
+
+/*
+* @brief Вернуть время аппаратного таймера
+*/
+uint32_t hard_timer_return_time()
 {
     return (TMR3 << 16) + TMR2;
 }

@@ -11,8 +11,9 @@
 */
 inline uint8_t is_timer_end(Timer* ptrTimer, uint32_t nowCount)
 {
-    if ( (ptrTimer->endOverflows < TIM23NumberOfOverflows) || 
-         ( (ptrTimer->endOverflows == TIM23NumberOfOverflows) && (ptrTimer->endCount <= nowCount) ) )
+    uint8_t hardTimerOverflows = hard_timer_return_overflows();
+    if ( (ptrTimer->endOverflows < hardTimerOverflows) || 
+         ( (ptrTimer->endOverflows == hardTimerOverflows) && (ptrTimer->endCount <= nowCount) ) )
         return 1;
     return 0;
 }
@@ -25,7 +26,7 @@ inline uint8_t is_timer_end(Timer* ptrTimer, uint32_t nowCount)
  * @brief Создание таймера (конструктор)
  * @return возвращает указатель на объейкт структуры Timer
 */
-Timer* create_timer()
+Timer* timer_create()
 {
     Timer* ptrTimer = (Timer*) malloc(1);
     ptrTimer->status = CREATED;
@@ -34,25 +35,25 @@ Timer* create_timer()
 
 /*
  * @brief Удаление таймера (деструктор)
- * param ptrTimer - указатель на объект структуры Timer
+ * @param ptrTimer - указатель на объект структуры Timer
 */
-void delete_timer(Timer* ptrTimer)
+void timer_delete(Timer* ptrTimer)
 {
     free(ptrTimer);
 }
 
 /*
  * @brief Запуск отчета таймера в мкс
- * param ptrTimer - указатель на объект структуры Timer
- * param time_us - время, которое будет отсчитывать таймер, в мкс
+ * @param ptrTimer - указатель на объект структуры Timer
+ * @param time_us - время, которое будет отсчитывать таймер, в мкс
 */
-void start_timer_us(Timer* ptrTimer, uint16_t time_us)
+void timer_start_us(Timer* ptrTimer, uint16_t time_us)
 {
     if (time_us != 0)
     {
         // Инициализация объекта текущим временем
-        ptrTimer->startCount = return_time_of_TIM23();
-        ptrTimer->startOverflows = TIM23NumberOfOverflows;
+        ptrTimer->startCount = hard_timer_return_time();
+        ptrTimer->startOverflows = hard_timer_return_overflows();
         // Инициализация объекта оставшимся временем до срабатывания таймера
         ptrTimer->restCount = time_us << US_TO_COUNT_LSHIFT;
         ptrTimer->restOverflows = 0;
@@ -73,7 +74,7 @@ void start_timer_us(Timer* ptrTimer, uint16_t time_us)
  * param ptrTimer - указатель на объект структуры Timer
  * param time_us - время, которое будет отсчитывать таймер, в мкс
 */
-void start_timer_ms(Timer* ptrTimer, uint16_t time_ms)
+void timer_start_ms(Timer* ptrTimer, uint16_t time_ms)
 {
     enum 
     {
@@ -83,8 +84,8 @@ void start_timer_ms(Timer* ptrTimer, uint16_t time_ms)
     if (time_ms != 0)
     {
         // Инициализация объекта текущим временем
-        ptrTimer->startCount = return_time_of_TIM23();
-        ptrTimer->startOverflows = TIM23NumberOfOverflows;
+        ptrTimer->startCount = hard_timer_return_time();
+        ptrTimer->startOverflows = hard_timer_return_overflows();
         // Инициализация объекта оставшимся временем до срабатывания таймера
         ptrTimer->restCount = time_ms * COUNT_IN_MS;
         ptrTimer->restOverflows = 0;
@@ -104,9 +105,9 @@ void start_timer_ms(Timer* ptrTimer, uint16_t time_ms)
  * @brief Возвращает статус таймера
  * param timer - указатель на объект структуры Timer
 */
-uint8_t report_timer(Timer* ptrTimer)
+uint8_t timer_report(Timer* ptrTimer)
 {
-    uint32_t nowCount = return_time_of_TIM23();
+    uint32_t nowCount = hard_timer_return_time();
     if ( ptrTimer->status == WORKING && is_timer_end(ptrTimer, nowCount) )
     {
         ptrTimer->status = FINISHED;
@@ -119,9 +120,9 @@ uint8_t report_timer(Timer* ptrTimer)
  * @param timer - указатель на объект структуры Timer
  * @return оставшееся время работы таймера в мкс
 */
-uint16_t get_rest_time(Timer* ptrTimer)
+uint16_t timer_get_rest_time(Timer* ptrTimer)
 {
-    uint32_t nowCount = return_time_of_TIM23();
+    uint32_t nowCount = hard_timer_return_time();
     // Если время вышло
     if ( ptrTimer->status == WORKING && is_timer_end(ptrTimer, nowCount) )
     {

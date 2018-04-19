@@ -6,7 +6,7 @@
 #include <stdio.h>  // временное решение
 
 UART_module* debug;
-Timer* soft_timer; 
+Timer* timer; 
 
 /* 
  * @brief Инициализация всей переферии
@@ -17,7 +17,8 @@ void init_periphery()
     motor_init();
     encoder_init();
     debug = UART_init(UART_1, UART_BAUD_RATE_9600);
-    soft_timer = create_timer();
+    hard_timer_init();
+    timer = timer_create();
     //findranger_init();
 }
 
@@ -59,14 +60,14 @@ void test_uart()
  */
 void test_software_timer() 
 {
-    start_timer_ms(soft_timer, 10000);   // запуск таймера на 10 сек
-    while(1) 
+    timer_start_ms(timer, 10000);   // запуск таймера на 10 сек
+    while( timer_report(timer) != FINISHED) 
     {
         uint32_t countOfDelay;
         for (countOfDelay = 0; countOfDelay < 5000000; countOfDelay++);
         /* КАСТЫЛЬ СНИЗУ: жрет 60 байт (0.2% от максимума) памяти данных!!!!!*/
         char buffer[12];
-        sprintf(buffer, "%lu", get_rest_time(soft_timer) );
+        sprintf(buffer, "%lu", timer_get_rest_time(timer) );
         UART_transmit(debug, buffer, 12);
         UART_transmit(debug, "\n", 1);
         /* КАСТЫЛЬ СВЕРХУ: жрет 1307 байт (1.5% от максимума) памяти программы!!!!!*/
@@ -78,9 +79,19 @@ void test_software_timer()
  */
 void test_encoder() 
 {
-    /* КАСТЫЛЬ СНИЗУ: жрет много памяти данных!!!!!*/
-    char buffer[12];
-    sprintf(buffer, "%lu", get_angle());
-    UART_transmit(debug, buffer, 12);
-    /* КАСТЫЛЬ СВЕРХУ: жрет много памяти программы!!!!!*/
+    int32_t angle = get_angle();
+    uint8_t count, countOfDelay;
+    
+    motor_set_power(10, MOTOR_LEFT);
+    motor_set_power(10, MOTOR_RIGHT);
+    for (count = 0; count < 10; count++)
+    {
+        /* КАСТЫЛЬ СНИЗУ: жрет много памяти данных!!!!!*/
+        char buffer[12];
+        sprintf(buffer, "%lu", angle);
+        UART_transmit(debug, buffer, 12);
+        /* КАСТЫЛЬ СВЕРХУ: жрет много памяти программы!!!!!*/
+        for (countOfDelay = 0; countOfDelay < 400000; countOfDelay++);
+    }
+    motors_stop();
 }
