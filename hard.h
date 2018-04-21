@@ -56,16 +56,16 @@ enum
 void GPIO_init();                   // Инициализация и настройка портов ввода/вывода
 
 /**************************** MOTOR_CONTROL (PWM) ****************************/
-void PWM_init();                    // Инициализация PWM
-void PWM_set(uint8_t, uint8_t);     // PWM установка скважности для указанной ножки
+void PWM_init();
+void PWM_set(uint8_t, uint8_t);
 /**************************** MOTOR_CONTROL (PWM) ****************************/
 
 /*************************** ENCODER (INT0 и INT1) ***************************/
-void encoders_interrupt_init();                         // Инициализация и разрешение прерывания
-inline void encoder_left_change_type_of_interrupt();    // Изменить тип прерывания левого (INT0)
-inline void encoder_right_change_type_of_interrupt();   // Изменить тип прерывания правого (INT1)
-inline void encoder_left_reset_interrupt_flag();        // Обнулить флаг прерывания левого (INT0)
-inline void encoder_right_reset_interrupt_flag();       // Обнулить флаг прерывания правого (INT1)
+void encoders_interrupt_init();
+inline void encoder_left_change_type_of_interrupt();
+inline void encoder_right_change_type_of_interrupt();
+inline void encoder_left_reset_interrupt_flag();
+inline void encoder_right_reset_interrupt_flag();
 
 /*************************** ENCODER (INT0 и INT1) ***************************/
 
@@ -74,6 +74,14 @@ void hard_timer_init();
 uint32_t hard_timer_return_time();
 uint8_t  hard_timer_return_overflows();
 /************************** SOFTWARE TIMER (TIM23)  **************************/
+
+/**************************** RANGE FINDER (INT4)  ****************************/
+#define RANGEFINDER_INPUT PORTAbits.RA15
+#define RANGEFINDER_OUTPUT PORTDbits.RD8
+#define RANGEFINDER_TYPE_OF_INTERRUPT INTCON2bits.INT4EP
+void rangefinder_init_interrupt();
+inline void rangefinder_change_type_of_interrupt();
+/**************************** RANGE FINDER (INT4)  ****************************/
 
 #endif	/* HARD_H */
 

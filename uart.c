@@ -19,7 +19,7 @@ enum
     UART2_RX_FLAG = (1 << 14),
 };
 
-volatile UART_module UART_module_base[] = 
+UART_module UART_module_base[] = 
 {
     {
         .write_big_endian_mode = false, .i_write_head_byte = 0, .i_write_tail_byte = 0, 
@@ -49,7 +49,7 @@ UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
 {
     // Проверка корректности аргументов:
     if ( (numberOfModule != UART_1) && (numberOfModule != UART_2) )
-        return;
+        return NULL;
     
     UART_module* module = &UART_module_base[numberOfModule];
     
@@ -94,7 +94,7 @@ uint8_t UART_bytes_available( UART_module* module )
 /* 
  * @brief Обработчик прерывания UART
 */
-void rx_interrupt_handler( UART_module* module )
+void rx_interrupt_handler( volatile UART_module* module )
 {
     if ( (*(module->reg_status) & UART_STA_DATA_ACCESS_BIT) && !module->read_overflow ) 
     {
@@ -157,7 +157,7 @@ void UART_receive( UART_module* module, uint8_t* buffer, uint8_t length )
  * @brief обработчик прерывания по UART TX
  * @return байт данных
 */
-void tx_interrupt_handler( UART_module* module )
+void tx_interrupt_handler( volatile UART_module* module )
 {
     while ( !(*(module->reg_status) & UART_STA_BUFFER_FULL_BIT) )
     {
@@ -209,7 +209,7 @@ void UART_write_byte( UART_module* module, uint8_t byte )
 /* 
  * @brief передать данные по UART
 */
-void UART_transmit( UART_module* module, uint8_t* buffer, uint8_t length )
+void UART_transmit( UART_module* module, char* buffer, uint8_t length )
 {
     if ( module == NULL )
         return;

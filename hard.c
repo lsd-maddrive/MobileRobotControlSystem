@@ -14,16 +14,18 @@ void GPIO_init()
 {
     // A0
     TRISA &= ~(1 << 0);         // PORTA0 - output
-    PORTA |= (1 << 0);          // PORTA0 - Высокий уровень
-
-    // INT1 - RE8; RE9
+    PORTA |= (1 << 0);          // PORTA0 - высокий уровень
+    
+    // Rangefinder
+    TRISA |= (1 << 15);         // PORTA15 - input (rangefinder input - INT4)
+    TRISD &= ~(1 << 8);         // PORTD8 - output
+    PORTD &= ~(1 << 8);         // PORTD8 - низкий уровень (rangefinder output)
+    
+    // Encoder
     TRISE |= (1 << 8) |         // PORTE8 - input (encoder2 - INT1)
              (1 << 9);          // PORTE8 - input (encoder2)
-    
-    // INT0 - RF6; RF7
     TRISF |= (1 << 6) |         // PORTF6 - input (encoder1 - INT0)
              (1 << 7);          // PORTF7 - input (encoder1)
-    
 }
 
 
@@ -194,4 +196,26 @@ uint8_t hard_timer_return_overflows()
 uint32_t hard_timer_return_time()
 {
     return (TMR3 << 16) + TMR2;
+}
+
+/*
+* @brief Инициализация внешнего прерывания дальномера - INT4
+*/
+void rangefinder_init_interrupt()
+{
+    RANGEFINDER_TYPE_OF_INTERRUPT = 0; // INT4 setup to interupt on rising edge
+    IFS3bits.INT4IF = 0;    // INT4 reset interrupt flag 
+    IEC3bits.INT4IE = 1;    // INT4 interupt enable
+    
+}
+
+/*
+* @brief Изменить тип внешнего прерывания дальномера - INT4
+*/
+inline void rangefinder_change_type_of_interrupt()
+{
+    if ( RANGEFINDER_TYPE_OF_INTERRUPT == ENCODER_POSITIVE_EDGE)
+        RANGEFINDER_TYPE_OF_INTERRUPT = ENCODER_NEGATIVE_EDGE;
+    else
+        RANGEFINDER_TYPE_OF_INTERRUPT = ENCODER_POSITIVE_EDGE;
 }

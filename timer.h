@@ -9,38 +9,39 @@
 
 enum TimerStatus
 {
-    CREATED,    // исходное состояние после конструктора
-    WORKING,    // таймер в процессе работы
-    WAITING,    // пауза
-    STOPPED,    // остановлен
-    FINISHED    // время истекло
+    CREATED,
+    WORKING,
+    WAITING,
+    STOPPED,
+    FINISHED
 };
 
 typedef struct 
 {
-    uint32_t startCount;        // начальное состояние счетчика
-    uint8_t  startOverflows;    // начальное кол-во переполнений счетчика
+    uint32_t startCount;
+    uint8_t  startOverflows;
     
-    uint32_t restCount;         // осталось тиков счетчика
-    uint8_t  restOverflows;     // осталось переполнений счетчика
+    uint32_t restCount;
+    uint8_t  restOverflows;
     
-    uint32_t endCount;          // конечное состояние счетчика
-    uint8_t  endOverflows;      // конечное кол-во переполнений таймера
+    uint32_t endCount;
+    uint8_t  endOverflows;
     
-    uint8_t  status;            // статус таймера
+    uint8_t  status;
 } Timer;
 
 Timer* timer_create();                  // конструктор
 void timer_delete(Timer*);              // деструктор
 
-void timer_start_us(Timer*, uint16_t);  // начать отчет времени в мкс
-void timer_start_ms(Timer*, uint16_t);  // начать отчет времени в мс
-void timer_continue(Timer*);            // продолжить отчет времени
-void timer_wait(Timer*);                // сделать паузу
-void timer_stop(Timer*);                // полностью остановить таймер
+void timer_start_us(Timer*, uint16_t);
+void timer_start_ms(Timer*, uint16_t);
+void timer_continue(Timer*);
+void timer_wait(Timer*);
+void timer_stop(Timer*);
 
-uint8_t timer_report(Timer*);           // вернуть статус таймера
-uint16_t timer_get_rest_time(Timer*);   // вернуть оставшееся время таймера
+uint8_t timer_report(Timer*);
+uint32_t timer_get_rest_time(Timer*);
+uint32_t timer_get_elapsed_time(Timer*);
 
 #endif	/* SOFT_TIMER_H */
 

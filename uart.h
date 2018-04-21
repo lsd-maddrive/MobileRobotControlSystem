@@ -55,7 +55,7 @@ typedef struct
 
 UART_module* UART_init(Uart_number_t, Uart_boud_rate_t);// Инициализация модуля uart
 void UART_receive(UART_module*, uint8_t*, uint8_t);     // Получение данных по uart
-void UART_transmit(UART_module*, uint8_t*, uint8_t);    // Передача данных по uart
+void UART_transmit(UART_module*, char*, uint8_t);    // Передача данных по uart
 
 
 #endif	/* UART_H */
