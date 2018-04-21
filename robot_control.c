@@ -19,7 +19,7 @@ void init_periphery()
     debug = UART_init(UART_1, UART_BAUD_RATE_9600);
     hard_timer_init();
     timer = timer_create();
-    //findranger_init();
+    rangefinder_init();
 }
 
 /* 
@@ -98,4 +98,20 @@ void test_encoder()
         for (countOfDelay = 0; countOfDelay < 400000; countOfDelay++);
     }
     motors_stop();
+}
+
+/* 
+ * @brief Тест работы модуля rangefinder
+ */
+void test_rangefinder()
+{
+    rangefinder_give_impulse();
+    uint16_t range = rangefinder_get_range();
+    
+    /* КАСТЫЛЬ СНИЗУ: жрет 60 байт (0.2% от максимума) памяти данных!!!!!*/
+    char buffer[12];
+    sprintf(buffer, "%lu", range );
+    UART_transmit(debug, buffer, 12);
+    UART_transmit(debug, "\n", 1);
+    /* КАСТЫЛЬ СВЕРХУ: жрет 1307 байт (1.5% от максимума) памяти программы!!!!!*/
 }

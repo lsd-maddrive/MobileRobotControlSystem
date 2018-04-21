@@ -143,7 +143,7 @@ uint32_t timer_get_elapsed_time(Timer* ptrTimer)
     const uint32_t MAX_COUNT = 4294967295UL;
     uint32_t nowCount = hard_timer_return_time();
     if( ptrTimer->startOverflows == hard_timer_return_overflows() )
-        return ( (ptrTimer->startCount - nowCount) << 2 );
-    return ( (MAX_COUNT - ptrTimer->startCount + nowCount) << 2 );
+        return ( (ptrTimer->startCount - nowCount) << 1 );
+    return ( (MAX_COUNT - ptrTimer->startCount + nowCount) << 1 );
 }
 /****************************** PUBLIC FUNCTION *******************************/

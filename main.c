@@ -54,7 +54,7 @@ int main(void)
         test_uart();            // не работают прерывания
         test_software_timer();  // ?
         test_encoder();         // ?
-        //test_range_finder();
+        test_rangefinder();     // ?
     }
     return 0;
 }
