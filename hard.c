@@ -3,6 +3,7 @@
  */
 #include "hard.h"
 
+static uint8_t hardTimerOverflows = 0;
 
 /*
 * @brief Инициализация портов ввода/вывода
@@ -81,32 +82,56 @@ void PWM_set(uint8_t duty_cycle, uint8_t pin)
 }
 
 /*
-* @brief Инициализация внешнего прерывание от источника INT0
+* @brief Инициализация внешнего прерывание энкодеров - INT0 и INT1
 */
-void interrupt_INT0_init()
+void encoders_interrupt_init()
 {
-    INTCON2 &= ~0x0001;     // INT0 setup to interupt on rising edge
+    INTCON2 &= ~0x0003;     // INT0 and INT1 setup to interupt on rising edge
     IFS0bits.INT0IF = 0;    // INT0 reset interrupt flag 
     IEC0bits.INT0IE = 1;    // INT0 interupt enable
+    
+    IFS1bits.INT1IF = 0;    // INT1 reset interrupt flag 
+    IEC1bits.INT1IE = 0;    // INT1 interupt enable
 }
 
 /*
-* @brief Меняет тип прерывания от INT0: с прерывания по верхнему уровню на нижний и наоборот
+* @brief Меняет тип прерывания левого энкодера
+* @note Левый энкодер - INT0
 */
-void change_type_of_interrupt()
+void encoder_left_change_type_of_interrupt()
 {
-    if ( (ENCODER_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
-        INTCON2 |= ENCODER_NEGATIVE_EDGE;
+    if ( (ENCODER_LEFT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
+        ENCODER_LEFT_TYPE_OF_INTERRUPT = ENCODER_NEGATIVE_EDGE;
     else
-        INTCON2 &= ENCODER_POSITIVE_EDGE;
+        ENCODER_LEFT_TYPE_OF_INTERRUPT = ENCODER_POSITIVE_EDGE;
 }
 
 /*
-* @brief Обнуляет флаг прерывания от INT0
+* @brief Меняет тип прерывания правого энкодера
+* @note Правый энкодер - INT1
 */
-void reset_interrupt_flag()
+void encoder_right_change_type_of_interrupt()
+{
+    if ( (ENCODER_LEFT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
+        ENCODER_RIGHT_TYPE_OF_INTERRUPT = ENCODER_NEGATIVE_EDGE;
+    else
+        ENCODER_RIGHT_TYPE_OF_INTERRUPT = ENCODER_POSITIVE_EDGE;
+}
+
+/*
+* @brief Обнуляет флаг прерывания от левого энкодера (INT0)
+*/
+inline void encoder_left_reset_interrupt_flag()
 {
     IFS0bits.INT0IF = 0;
+}
+
+/*
+* @brief Обнуляет флаг прерывания от правого энкодера (INT1)
+*/
+inline void encoder_right_reset_interrupt_flag()
+{
+    IFS1bits.INT1IF = 0;
 }
 
 /* Некоторые нюансы работы аппаратного таймера:

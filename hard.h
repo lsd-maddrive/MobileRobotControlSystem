@@ -34,12 +34,16 @@ enum
     P1DC_MIN = 0,        
 };
 
-#define ENCODER_PIN1 PORTFbits.RF6
-#define ENCODER_PIN2 PORTFbits.RF7
-#define ENCODER_TYPE_OF_INTERRUPT INTCON2 & ~(1 << 0)
+#define ENCODER_LEFT_PIN1 PORTFbits.RF6
+#define ENCODER_LEFT_PIN2 PORTFbits.RF7
+#define ENCODER_RIGHT_PIN1 PORTFbits.RF6
+#define ENCODER_RIGHT_PIN2 PORTFbits.RF7
+
+#define ENCODER_LEFT_TYPE_OF_INTERRUPT INTCON2bits.INT0EP
+#define ENCODER_RIGHT_TYPE_OF_INTERRUPT INTCON2bits.INT1EP
 enum
 {
-    ENCODER_POSITIVE_EDGE = ~1,
+    ENCODER_POSITIVE_EDGE = 0,
     ENCODER_NEGATIVE_EDGE = 1
 };
 
@@ -56,14 +60,16 @@ void PWM_init();                    // Инициализация PWM
 void PWM_set(uint8_t, uint8_t);     // PWM установка скважности для указанной ножки
 /**************************** MOTOR_CONTROL (PWM) ****************************/
 
-/******************************* ENCODER (INT0) *******************************/
-void interrupt_INT0_init();             // Инициализация и разрешение прерывания
-inline void change_type_of_interrupt(); // Изменить тип прерывания
-inline void reset_interrupt_flag();     // Обнулить флаг прерывания
-/******************************* ENCODER (INT0) *******************************/
+/*************************** ENCODER (INT0 и INT1) ***************************/
+void encoders_interrupt_init();                         // Инициализация и разрешение прерывания
+inline void encoder_left_change_type_of_interrupt();    // Изменить тип прерывания левого (INT0)
+inline void encoder_right_change_type_of_interrupt();   // Изменить тип прерывания правого (INT1)
+inline void encoder_left_reset_interrupt_flag();        // Обнулить флаг прерывания левого (INT0)
+inline void encoder_right_reset_interrupt_flag();       // Обнулить флаг прерывания правого (INT1)
+
+/*************************** ENCODER (INT0 и INT1) ***************************/
 
 /************************** SOFTWARE TIMER (TIM23)  **************************/
-static uint8_t hardTimerOverflows = 0;
 void hard_timer_init();
 uint32_t hard_timer_return_time();
 uint8_t  hard_timer_return_overflows();

@@ -15,7 +15,7 @@ void init_periphery()
 {
     GPIO_init();
     motor_init();
-    encoder_init();
+    encoders_init();
     debug = UART_init(UART_1, UART_BAUD_RATE_9600);
     hard_timer_init();
     timer = timer_create();
@@ -79,7 +79,8 @@ void test_software_timer()
  */
 void test_encoder() 
 {
-    int32_t angle = get_angle();
+    int32_t angleLeft = encoder_left_get_angle();
+    int32_t angleRight = encoder_right_get_angle();
     uint8_t count, countOfDelay;
     
     motor_set_power(10, MOTOR_LEFT);
@@ -88,7 +89,10 @@ void test_encoder()
     {
         /* КАСТЫЛЬ СНИЗУ: жрет много памяти данных!!!!!*/
         char buffer[12];
-        sprintf(buffer, "%lu", angle);
+        sprintf(buffer, "%lu", angleLeft);
+        UART_transmit(debug, buffer, 12);
+  
+        sprintf(buffer, "%lu", angleRight);
         UART_transmit(debug, buffer, 12);
         /* КАСТЫЛЬ СВЕРХУ: жрет много памяти программы!!!!!*/
         for (countOfDelay = 0; countOfDelay < 400000; countOfDelay++);
