@@ -7,7 +7,7 @@
 /*
 * @brief Подать питание на двигатель
 * @param power - мощность в %
-* @param motor - название двигателя
+* @param motor - название двигателя (MOTOR_LEFT, MOTOR_RIGHT)
 */
 void motor_set_power(int8_t power, uint8_t motor)
 {

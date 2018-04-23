@@ -2,11 +2,108 @@
  * File:   robot_control.c
  */
 
+/* Описание системы управления
+ * Система управления строится на 2 базовых действиях:
+ * - поворот на месте 
+ * - прямолинейное движение
+ *
+ * 1. Поворот на месте
+ * Во время поворота на месте двигатели вращаются в противоположные стороны с
+ * одинаковой мощностью, пропорциональной заданной скорости робота.
+ * Среднее кол-во импульсов с обоих энкодеров переводится в угол путем умножения
+ * кол-ва импульсов на коэффициент, полученный опытным путем в ходе калибровки.
+ *
+ * 2. Прямолинейное движение
+ * Во время прямолинейного движения двигатели вращаются в одинаковые стороны с
+ * средней мощностью, пропорциональной заданной скорости робота.
+ * Если суммарное кол-во импульсов одного из энкодеров будет отличаться, то мощ-
+ * ность двигателя будет увеличена.
+ * Кол-во импульсов энкодера, соответствующее единице расстояния определяется
+ * опытнм путем в ходе халибровки.
+ *
+ * Наверно, будем считать аддитивную погрешность определения координат - 1 см.
+ */
+
 #include "robot_control.h"
+#include "math.h"
 #include <stdio.h>  // временное решение
 
-UART_module* debug;
-Timer* timer; 
+enum Start_data
+{
+    ROBOT_START_MIN_SPEED = 10,     // Исходное значение минимальной скорости см/сек
+    ROBOT_START_MAX_SPEED = 10,     // Исходное значение максимальной скорости см/сек
+    ROBOT_START_ACCELERATION = 10,  // Исходное значение ускорения см/сек^2
+    ROBOT_START_DECELERATION = 10,  // Исходное значение замедления см/сек^2
+};
+
+enum Calibration
+{
+    PULSES_IN_REVOLUTION = 500,
+    PULSES_IN_METER = 500,
+};
+
+typedef struct 
+{
+    int16_t x;
+    int16_t y;
+    int16_t angle;
+    uint16_t range;
+    uint8_t minSpeed;
+    uint8_t maxSpeed;
+    uint8_t currentSpeed;
+    uint8_t acceleration;
+    uint8_t deceleration;
+} Robot_data;
+
+
+// Глобальные и статические переменные:
+static UART_module* debug;
+static Timer* timer; 
+static Robot_data robot =
+{
+    .x = 0, .y = 0, .angle = 0, .range = 0, 
+    .minSpeed = ROBOT_START_MIN_SPEED,
+    .maxSpeed = ROBOT_START_MAX_SPEED,
+    .currentSpeed = 0,
+    .acceleration = ROBOT_START_ACCELERATION,
+    .deceleration = ROBOT_START_DECELERATION
+};
+
+/* 
+ * @brief Поворот на указанный угол
+ */
+inline void turn_around_by(int16_t angle)
+{
+    if ( angle > 0) // поворот по часовой
+    {
+        motor_set_power(robot.minSpeed,  MOTOR_LEFT);
+        motor_set_power(-robot.minSpeed, MOTOR_RIGHT);
+        uint16_t needPulses = PULSES_IN_REVOLUTION*angle/360;
+        while(encoder_right_get_pulses() < needPulses);
+    }
+    else if ( angle < 0) // поворот против часовой
+    {
+        motor_set_power(-robot.minSpeed, MOTOR_LEFT);
+        motor_set_power(robot.minSpeed,  MOTOR_RIGHT);
+        uint16_t needPulses = PULSES_IN_REVOLUTION*(-1*angle)/360;
+        while(encoder_left_get_pulses() < needPulses);
+    }
+    else
+    {
+        return;
+    }
+    motors_stop();
+    robot.angle =+ angle;
+}
+
+/* 
+ * @brief Поворот к указанному углу
+ */
+void turn_around_to(int16_t angle)
+{
+    turn_around_by(angle - robot.angle);
+}
+
 
 /* 
  * @brief Инициализация всей переферии
@@ -79,8 +176,8 @@ void test_software_timer()
  */
 void test_encoder() 
 {
-    int32_t angleLeft = encoder_left_get_angle();
-    int32_t angleRight = encoder_right_get_angle();
+    int32_t pulsesLeft = encoder_left_get_pulses();
+    int32_t pulsesRight = encoder_right_get_pulses();
     uint8_t count, countOfDelay;
     
     motor_set_power(10, MOTOR_LEFT);
@@ -89,10 +186,10 @@ void test_encoder()
     {
         /* КАСТЫЛЬ СНИЗУ: жрет много памяти данных!!!!!*/
         char buffer[12];
-        sprintf(buffer, "%lu", angleLeft);
+        sprintf(buffer, "%lu", pulsesLeft);
         UART_transmit(debug, buffer, 12);
   
-        sprintf(buffer, "%lu", angleRight);
+        sprintf(buffer, "%lu", pulsesRight);
         UART_transmit(debug, buffer, 12);
         /* КАСТЫЛЬ СВЕРХУ: жрет много памяти программы!!!!!*/
         for (countOfDelay = 0; countOfDelay < 400000; countOfDelay++);

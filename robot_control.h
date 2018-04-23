@@ -12,6 +12,10 @@
 #include "uart.h"
 
 void init_periphery();          // Инициализация всей переферии
+
+void turn_around_to(int16_t);   // Поворот на указанный угол
+
+
 void test_motor_control();      // Проверка работы модуля motor_control
 void test_uart();               // Проверка работы модуля uart
 void test_software_timer();     // Проверка работы модуля software_timer
