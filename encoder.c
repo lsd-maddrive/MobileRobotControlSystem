@@ -14,8 +14,8 @@
  * Во время прерывания проверяем состояние второй ноги.
  */
 
-volatile int16_t angleLeft;
-volatile int16_t angleRight;
+volatile int16_t pulsesLeft;
+volatile int16_t pulsesRight;
 
 
 /*
@@ -23,8 +23,8 @@ volatile int16_t angleRight;
 */
 void encoders_init()
 {
-    angleLeft = 0;
-    angleRight = 0;
+    pulsesLeft = 0;
+    pulsesRight = 0;
     encoders_interrupt_init();
 }
 
@@ -36,16 +36,16 @@ void __attribute__((interrupt, no_auto_psv)) _INT0Interrupt(void)
     if ( (ENCODER_LEFT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
         if (ENCODER_LEFT_PIN2 == 1)
-            angleLeft++;
+            pulsesLeft++;
         else
-            angleLeft--;
+            pulsesLeft--;
     }
     else
     {
         if (ENCODER_LEFT_PIN2 == 1)
-            angleLeft--;
+            pulsesLeft--;
         else
-            angleLeft++;
+            pulsesLeft++;
     }
     
     encoder_left_change_type_of_interrupt();
@@ -60,16 +60,16 @@ void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void)
     if ( (ENCODER_RIGHT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
         if (ENCODER_RIGHT_PIN2 == 1)
-            angleRight++;
+            pulsesRight++;
         else
-            angleRight--;
+            pulsesRight--;
     }
     else
     {
         if (ENCODER_RIGHT_PIN2 == 1)
-            angleRight--;
+            pulsesRight--;
         else
-            angleRight++;
+            pulsesRight++;
     }
     
     encoder_right_change_type_of_interrupt();
@@ -80,16 +80,25 @@ void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void)
 * @brief Получить значение угла поворота левого энкодера
 * @return значение угла поворота левого энкодера
 */
-int16_t encoder_left_get_angle()
+int16_t encoder_left_get_pulses()
 {
-    return angleLeft;
+    return pulsesLeft;
 }
 
 /*
 * @brief Получить значение угла поворота правого энкодера
 * @return значение угла поворота правого энкодера
 */
-int16_t encoder_right_get_angle()
+int16_t encoder_right_get_pulses()
 {
-    return angleRight;
+    return pulsesRight;
+}
+
+/*
+* @brief Обнулить кол-во импульсов энкодеров
+*/
+void encoders_reset_angle()
+{
+    pulsesLeft = 0;
+    pulsesRight = 0;
 }
