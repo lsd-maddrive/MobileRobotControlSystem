@@ -8,6 +8,7 @@
 #include "encoder.h"
 #include "hard.h"
 #include "motor_control.h"
+#include "rangefinder.h"
 #include "timer.h"
 #include "uart.h"
 

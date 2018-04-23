@@ -195,7 +195,7 @@ uint8_t hard_timer_return_overflows()
 */
 uint32_t hard_timer_return_time()
 {
-    return (TMR3 << 16) + TMR2;
+    return (TMR3 << 15) + TMR2;
 }
 
 /*
