@@ -58,7 +58,7 @@ typedef struct
 
 // Глобальные и статические переменные:
 static UART_module* debug;
-static Timer* timer; 
+static Timer timer; 
 static Robot_data robot =
 {
     .x = 0, .y = 0, .angle = 0, .range = 0, 
@@ -163,7 +163,7 @@ void init_periphery()
     encoders_init();
     debug = UART_init(UART_1, UART_BAUD_RATE_9600);
     hard_timer_init();
-    timer = timer_create();
+    soft_timer_init(&timer);
     rangefinder_init();
 }
 
@@ -197,7 +197,7 @@ void test_motor_control()
  */
 void test_uart() 
 {
-    UART_transmit(debug, "Test UART is succeed\n", 21);
+    UART_transmit(debug, "Test UART is succeed\n\r", 23);
 }
 
 /* 
@@ -205,18 +205,39 @@ void test_uart()
  */
 void test_software_timer() 
 {
-    timer_start_ms(timer, 10000);   // запуск таймера на 10 сек
-    while( timer_report(timer) != FINISHED) 
+    //char arrOfDigits[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+    
+    UART_transmit(debug, "\n\r", 2);
+    uint8_t count;
+    for (count = 0; count < 10; count++)
     {
-        uint32_t countOfDelay;
-        for (countOfDelay = 0; countOfDelay < 5000000; countOfDelay++);
-        /* КАСТЫЛЬ СНИЗУ: жрет 60 байт (0.2% от максимума) памяти данных!!!!!*/
-        char buffer[12];
-        sprintf(buffer, "%lu", timer_get_rest_time(timer) );
-        UART_transmit(debug, buffer, 12);
-        UART_transmit(debug, "\n", 1);
-        /* КАСТЫЛЬ СВЕРХУ: жрет 1307 байт (1.5% от максимума) памяти программы!!!!!*/
+        
+        timer_start_ms(&timer, 1000);   // запуск таймера на 1 сек
+        while( timer_report(&timer) == WORKING);
+        {
+            char buffer[12];      
+            sprintf(buffer, "%lu", hard_timer_return_overflows());
+            UART_transmit(debug, buffer, 12);
+            UART_transmit(debug, "\n\r\n\r", 4);
+            
+            sprintf(buffer, "%lu", hard_timer_return_time());
+            UART_transmit(debug, buffer, 12);
+            UART_transmit(debug, "\n\r\n\r", 4);
+            
+            sprintf(buffer, "%lu", TMR2);
+            UART_transmit(debug, buffer, 12);
+            UART_transmit(debug, "\n\r\n\r", 4);
+            
+            sprintf(buffer, "%lu", TMR3);
+            UART_transmit(debug, buffer, 12);
+            UART_transmit(debug, "\n\r\n\r", 4);
+        }
+        
+        UART_transmit(debug, "finished\n\r", 10);
+        //UART_transmit(debug, arrOfDigits[count], 1);
+        //UART_transmit(debug, "\n\r", 2);
     }
+    UART_transmit(debug, "the end\n\r", 9);
 }
 
 /* 

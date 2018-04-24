@@ -59,6 +59,7 @@ UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
     
     if(numberOfModule == UART_1)
     {
+        U1BRG = boudRate;
         _U1TXIF = 0;            // TX interrupt flag reset
         _U1RXIF = 0;            // RX interrupt flag reset
         
@@ -67,9 +68,16 @@ UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
         
         _U1TXIP = 1;            // TX interrupt prioputy 
         _U1RXIP = 1;            // RX interrupt prioputy 
+        
+        U1STAbits.UTXISEL0 = 0;
+        U1STAbits.UTXISEL1 = 0;
+        
+        U1MODEbits.UARTEN = 1;
+        U1STAbits.UTXEN = 1;
     }
     else
     {
+        U2BRG = boudRate;
         _U2TXIF = 0;            // TX interrupt flag reset
         _U2RXIF = 0;            // RX interrupt flag reset
         
@@ -78,6 +86,12 @@ UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
         
         _U2TXIP = 1;            // TX interrupt prioputy 
         _U2RXIP = 1;            // RX interrupt prioputy 
+        
+        U2STAbits.UTXISEL0 = 0;
+        U2STAbits.UTXISEL1 = 0;
+        
+        U2MODEbits.UARTEN = 1;
+        U2STAbits.UTXEN = 1;
     }
     
     return module;

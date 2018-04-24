@@ -10,7 +10,7 @@
 #include "rangefinder.h"
 
 static uint16_t range;
-static Timer* timer; 
+static Timer timer; 
 
 /*
 * @brief Инициализация ултьтразвукового дальномера
@@ -18,7 +18,7 @@ static Timer* timer;
 void rangefinder_init()
 {
     rangefinder_init_interrupt();
-    timer = timer_create();
+    soft_timer_init(&timer);
     range = 0;
 }
 
@@ -28,8 +28,8 @@ void rangefinder_init()
 void rangefinder_give_impulse()
 {
     RANGEFINDER_OUTPUT = 1;
-    timer_start_ms(timer, 10);
-    while(timer_report(timer) != FINISHED);
+    timer_start_ms(&timer, 10);
+    while(timer_report(&timer) != FINISHED);
     RANGEFINDER_OUTPUT = 0;
 }
 
@@ -52,14 +52,14 @@ void __attribute__((interrupt, no_auto_psv)) _INT4Interrupt(void)
     };
     if ( (RANGEFINDER_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
-        timer_start_ms(timer, 25);
+        timer_start_ms(&timer, 25);
     }
     else
     {
-        if( timer_report(timer) != WORKING)
+        if( timer_report(&timer) != WORKING)
             range = 0;
         else
-            range = (uint32_t)SOUND_SPEED*timer_get_elapsed_time(timer)/1000 >> 1;
+            range = (uint32_t)SOUND_SPEED*timer_get_elapsed_time(&timer)/1000 >> 1;
     }
     rangefinder_change_type_of_interrupt();
 }

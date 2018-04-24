@@ -30,7 +30,7 @@ typedef struct
     uint8_t  status;
 } Timer;
 
-Timer* timer_create();                  // конструктор
+void soft_timer_init();                  // конструктор
 void timer_delete(Timer*);              // деструктор
 
 void timer_start_us(Timer*, uint16_t);

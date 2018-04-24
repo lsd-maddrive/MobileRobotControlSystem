@@ -7,11 +7,12 @@
 /****************************** PRIVATE FUNCTION ******************************/
 /* 
  * @brief Возвращает true, если время пришло, в противном случае false
- * @return возвращает указатель на объейкт структуры Timer
+ * @return возвращает указатель на объект структуры Timer
 */
 inline uint8_t is_timer_end(Timer* ptrTimer, uint32_t nowCount)
 {
     uint8_t hardTimerOverflows = hard_timer_return_overflows();
+    
     if ( (ptrTimer->endOverflows < hardTimerOverflows) || 
          ( (ptrTimer->endOverflows == hardTimerOverflows) && (ptrTimer->endCount <= nowCount) ) )
         return 1;
@@ -26,11 +27,18 @@ inline uint8_t is_timer_end(Timer* ptrTimer, uint32_t nowCount)
  * @brief Создание таймера (конструктор)
  * @return возвращает указатель на объейкт структуры Timer
 */
-Timer* timer_create()
+void soft_timer_init(Timer* ptrTimer)
 {
-    Timer* ptrTimer = (Timer*) malloc(1);
     ptrTimer->status = CREATED;
-    return ptrTimer;
+    
+    ptrTimer->startCount = 0;
+    ptrTimer->startOverflows = 0;
+    
+    ptrTimer->restCount = 0;
+    ptrTimer->restOverflows = 0;
+    
+    ptrTimer->endCount = 0;
+    ptrTimer->endOverflows = 0;
 }
 
 /*
@@ -78,8 +86,8 @@ void timer_start_ms(Timer* ptrTimer, uint16_t time_ms)
 {
     enum 
     {
-        MS_TO_US = 1000,
-        COUNT_IN_MS = 1000*US_IN_COUNT,
+        US_IN_MS = 1000,
+        COUNT_IN_MS = US_IN_MS*US_IN_COUNT,
     };
     if (time_ms != 0)
     {
@@ -88,10 +96,10 @@ void timer_start_ms(Timer* ptrTimer, uint16_t time_ms)
         ptrTimer->startOverflows = hard_timer_return_overflows();
         // Инициализация объекта оставшимся временем до срабатывания таймера
         ptrTimer->restCount = time_ms * COUNT_IN_MS;
-        ptrTimer->restOverflows = 0;
+        ptrTimer->restOverflows = 0; //( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount) ? 0 : 0
         // Инициализация объекта временем срабатывания таймера
         ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
-        ptrTimer->endOverflows = ( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount) ? 1:0;
+        ptrTimer->endOverflows = ptrTimer->startOverflows + ptrTimer->restOverflows;
         
         ptrTimer->status = WORKING;
     }
@@ -130,7 +138,8 @@ uint32_t timer_get_rest_time(Timer* ptrTimer)
         ptrTimer->restOverflows = 0;
         ptrTimer->status = FINISHED;
     }
-    return ( ptrTimer->restCount << 2 );
+    ptrTimer->restCount = ptrTimer->endCount - nowCount;
+    return ( ptrTimer->restCount >> US_TO_COUNT_LSHIFT );
 }
 
 /*
@@ -142,6 +151,7 @@ uint32_t timer_get_elapsed_time(Timer* ptrTimer)
 {
     const uint32_t MAX_COUNT = 4294967295UL;
     uint32_t nowCount = hard_timer_return_time();
+    
     if( ptrTimer->startOverflows == hard_timer_return_overflows() )
         return ( (ptrTimer->startCount - nowCount) << 1 );
     return ( (MAX_COUNT - ptrTimer->startCount + nowCount) << 1 );

@@ -20,7 +20,7 @@ typedef enum
 
 typedef enum
 {
-    UART_BAUD_RATE_9600 = CLOCK_FREQUENCY/16/9600 - 1,      // 103
+    UART_BAUD_RATE_9600 = 103,      // CLOCK_FREQUENCY/16/9600 - 1
     UART_BAUD_RATE_115200 = CLOCK_FREQUENCY/16/115200 - 1,  // 8
 } Uart_boud_rate_t;
 

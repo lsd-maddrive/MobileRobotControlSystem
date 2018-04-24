@@ -50,11 +50,11 @@ int main(void)
     init_periphery();
     while(1)
     {
-        test_motor_control();   // успешно работает
-        test_uart();            // не работают прерывания
+        //test_motor_control(); // успешно работает
+        //test_uart();            // успешно работает
         test_software_timer();  // ?
-        test_encoder();         // ?
-        test_rangefinder();     // ?
+        //test_encoder();         // ?
+        //test_rangefinder();     // ?
     }
     return 0;
 }

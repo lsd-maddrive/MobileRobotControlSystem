@@ -2,8 +2,9 @@
  * File:   main.c
  */
 #include "hard.h"
+#include "uart.h"
 
-static uint8_t hardTimerOverflows = 0;
+static uint8_t hardTimerOverflows;
 
 /*
 * @brief Инициализация портов ввода/вывода
@@ -150,21 +151,25 @@ inline void encoder_right_reset_interrupt_flag()
 */
 void hard_timer_init()
 {
-    T3CON = 0;              // Stop any operations Timer3
-    T2CON = 0;              // Stop any operations Timer2
-    
-    T2CONbits.T32= 1;       // Enable 32-bit mode
-    T2CONbits.TCKPS = 1;    // Timer2 prescale 1:8  
-    TMR2 =  0x0000;         // Clear least significant half word
-    TMR3 =  0x0000;         // Clear most significant half word
-    PR2 = 0xFFFF;           // Timer23 period register
+    hardTimerOverflows = 0;
+    T3CONbits.TON = 0;      // Stop any operations Timer3
+    T2CONbits.TON = 0;      // Stop any operations Timer2
+    T2CONbits.T32 = 1;      // Enable 32-bit mode
+    T2CONbits.TCS = 0;      // Select internal instruction clock cycle
+    T2CONbits.TGATE = 0;    // Disable Gates Mode
+    T2CONbits.TCKPS = 0b01; // prescale 1:8 
+    TMR3 =  0x00;           // Clear most significant half word
+    TMR2 =  0x00;           // Clear least significant half word
     PR3 = 0xFFFF;           // Timer23 period register
+    PR2 = 0x0000;           // Timer23 period register
     
-    IPC2bits.T3IP = 0x01;   // Set Timer3 Interrupt Priority Level
+    IPC2bits.T3IP = 0x05;   // Set Timer3 Interrupt Priority Level
     IFS0bits.T3IF = 0;      // Clear Timer3 Interrupt Flag
     IEC0bits.T3IE = 1;      // Enable Timer3 interrupt
     
+    T3CONbits.TON = 1;      // Start 32-bit Timer
     T2CONbits.TON = 1;      // Start 32-bit Timer
+    
 }
 
 /*
@@ -172,14 +177,9 @@ void hard_timer_init()
 */
 void __attribute__((interrupt,no_auto_psv)) _T3Interrupt( void )
 {
+   	//hardTimerOverflows++;
+    
     IFS0bits.T3IF = 0;      // Очистка флага прерывания
-    T2CONbits.TON = 0;      // Выключение таймера
-    T3CONbits.TON = 0;      // Выключение таймера
-    
-   	hardTimerOverflows++;
-    
-    T3CONbits.TON = 1;      // Включение таймера
-	T2CONbits.TON = 1;      // Включение таймера
 }
 
 /*
@@ -195,7 +195,7 @@ uint8_t hard_timer_return_overflows()
 */
 uint32_t hard_timer_return_time()
 {
-    return (TMR3 << 15) + TMR2;
+    return (TMR3 << 16) + TMR2;
 }
 
 /*
