@@ -2,7 +2,6 @@
  * File:   main.c
  */
 #include "hard.h"
-#include "uart.h"
 
 static uint8_t hardTimerOverflows;
 
@@ -160,8 +159,9 @@ void hard_timer_init()
     T2CONbits.TCKPS = 0b01; // prescale 1:8 
     TMR3 =  0x00;           // Clear most significant half word
     TMR2 =  0x00;           // Clear least significant half word
+    TMR3HLD = 0x00;
     PR3 = 0xFFFF;           // Timer23 period register
-    PR2 = 0x0000;           // Timer23 period register
+    PR2 = 0xFFFF;           // Timer23 period register
     
     IPC2bits.T3IP = 0x05;   // Set Timer3 Interrupt Priority Level
     IFS0bits.T3IF = 0;      // Clear Timer3 Interrupt Flag
@@ -177,7 +177,7 @@ void hard_timer_init()
 */
 void __attribute__((interrupt,no_auto_psv)) _T3Interrupt( void )
 {
-   	//hardTimerOverflows++;
+   	hardTimerOverflows++;
     
     IFS0bits.T3IF = 0;      // Очистка флага прерывания
 }
@@ -195,7 +195,9 @@ uint8_t hard_timer_return_overflows()
 */
 uint32_t hard_timer_return_time()
 {
-    return (TMR3 << 16) + TMR2;
+    uint16_t lsw = TMR2;
+    uint16_t msw = TMR3HLD;
+    return ((uint32_t)msw << 16) + lsw;
 }
 
 /*

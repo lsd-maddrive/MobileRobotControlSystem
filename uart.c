@@ -19,7 +19,7 @@ enum
     UART2_RX_FLAG = (1 << 14),
 };
 
-UART_module UART_module_base[] = 
+volatile UART_module UART_module_base[] = 
 {
     {
         .write_big_endian_mode = false, .i_write_head_byte = 0, .i_write_tail_byte = 0, 
@@ -53,12 +53,16 @@ UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
     
     UART_module* module = &UART_module_base[numberOfModule];
     
-    *module->reg_mode &= ~(1 << 15); // UARTx is disabled
-    *module->reg_mode &= ~(3 << 8);  // TX, RX en; CTS, RTS dis
-    *module->reg_mode &= ~(1 << 3);  // Standard Speed mode
+    //*module->reg_mode &= ~(1 << 15); // UARTx is disabled
+    //*module->reg_mode &= ~(3 << 8);  // TX, RX en; CTS, RTS dis
+    //*module->reg_mode &= ~(1 << 3);  // Standard Speed mode
     
     if(numberOfModule == UART_1)
     {
+        U1MODEbits.UARTEN = 0;  // UART1 is disabled
+        U1MODEbits.UEN = 0;     // Bits8,9 TX,RX enabled, CTS,RTS not
+        U1MODEbits.BRGH = 0;
+        
         U1BRG = boudRate;
         _U1TXIF = 0;            // TX interrupt flag reset
         _U1RXIF = 0;            // RX interrupt flag reset
@@ -72,11 +76,13 @@ UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
         U1STAbits.UTXISEL0 = 0;
         U1STAbits.UTXISEL1 = 0;
         
-        U1MODEbits.UARTEN = 1;
+        U1MODEbits.UARTEN = 1;  // UARTx is enabled
         U1STAbits.UTXEN = 1;
     }
     else
     {
+        U2MODEbits.UARTEN = 0;  // UART2 is disabled
+        
         U2BRG = boudRate;
         _U2TXIF = 0;            // TX interrupt flag reset
         _U2RXIF = 0;            // RX interrupt flag reset
@@ -242,3 +248,23 @@ void UART_transmit( UART_module* module, char* buffer, uint8_t length )
         }
     }
 }
+
+static char send_buffer[UART_DATA_BUFFER_SIZE];
+
+
+void UART_write_string( UART_module* module, const char *fstring, ... )
+{
+    if ( module == NULL )
+        return;
+    
+    int iter = 0;
+    va_list str_args;
+    
+    va_start( str_args, fstring );
+    vsprintf( send_buffer, fstring, str_args );
+    va_end( str_args );
+    
+    while( send_buffer[iter] != '\0' )
+        UART_write_byte( module, send_buffer[iter++] );
+}
+ 

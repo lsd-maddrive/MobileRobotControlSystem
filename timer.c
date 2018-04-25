@@ -63,7 +63,7 @@ void timer_start_us(Timer* ptrTimer, uint16_t time_us)
         ptrTimer->startCount = hard_timer_return_time();
         ptrTimer->startOverflows = hard_timer_return_overflows();
         // Инициализация объекта оставшимся временем до срабатывания таймера
-        ptrTimer->restCount = time_us << US_TO_COUNT_LSHIFT;
+        ptrTimer->restCount = ((uint32_t)time_us ) << US_TO_COUNT_LSHIFT;
         ptrTimer->restOverflows = 0;
         // Инициализация объекта временем срабатывания таймера
         ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
@@ -95,7 +95,7 @@ void timer_start_ms(Timer* ptrTimer, uint16_t time_ms)
         ptrTimer->startCount = hard_timer_return_time();
         ptrTimer->startOverflows = hard_timer_return_overflows();
         // Инициализация объекта оставшимся временем до срабатывания таймера
-        ptrTimer->restCount = time_ms * COUNT_IN_MS;
+        ptrTimer->restCount = (uint32_t)time_ms * COUNT_IN_MS;
         ptrTimer->restOverflows = 0; //( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount) ? 0 : 0
         // Инициализация объекта временем срабатывания таймера
         ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
