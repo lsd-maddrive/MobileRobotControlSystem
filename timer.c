@@ -130,16 +130,21 @@ uint8_t timer_report(Timer* ptrTimer)
 */
 uint32_t timer_get_rest_time(Timer* ptrTimer)
 {
-    uint32_t nowCount = hard_timer_return_time();
-    // Если время вышло
-    if ( ptrTimer->status == WORKING && is_timer_end(ptrTimer, nowCount) )
+    if ( ptrTimer->status == WORKING)
     {
-        ptrTimer->restCount = 0;
-        ptrTimer->restOverflows = 0;
-        ptrTimer->status = FINISHED;
+        uint32_t nowCount = hard_timer_return_time();
+        if ( is_timer_end(ptrTimer, nowCount) )
+        {
+            ptrTimer->status = FINISHED;
+            return 0;
+        }
+        else
+        {
+            ptrTimer->restCount = ptrTimer->endCount - nowCount;
+            return ( ptrTimer->restCount >> US_TO_COUNT_LSHIFT );
+        }
     }
-    ptrTimer->restCount = ptrTimer->endCount - nowCount;
-    return ( ptrTimer->restCount >> US_TO_COUNT_LSHIFT );
+    return 0;
 }
 
 /*
@@ -153,7 +158,10 @@ uint32_t timer_get_elapsed_time(Timer* ptrTimer)
     uint32_t nowCount = hard_timer_return_time();
     
     if( ptrTimer->startOverflows == hard_timer_return_overflows() )
-        return ( (ptrTimer->startCount - nowCount) << 1 );
-    return ( (MAX_COUNT - ptrTimer->startCount + nowCount) << 1 );
+    {
+        return ( (nowCount - ptrTimer->startCount) >> US_TO_COUNT_LSHIFT );
+    }
+    return ( (MAX_COUNT - ptrTimer->startCount + nowCount) >> US_TO_COUNT_LSHIFT );
+    
 }
 /****************************** PUBLIC FUNCTION *******************************/

@@ -9,8 +9,9 @@
 
 #include "rangefinder.h"
 
-static uint16_t range;
-static Timer timer; 
+static uint32_t range;
+static Timer timerForPulse; 
+static Timer timerForEcho; 
 
 /*
 * @brief Инициализация ултьтразвукового дальномера
@@ -18,7 +19,8 @@ static Timer timer;
 void rangefinder_init()
 {
     rangefinder_init_interrupt();
-    soft_timer_init(&timer);
+    soft_timer_init(&timerForPulse);
+    soft_timer_init(&timerForEcho);
     range = 0;
 }
 
@@ -27,9 +29,15 @@ void rangefinder_init()
 */
 void rangefinder_give_impulse()
 {
+    // Заблаговременно устанавливаем ножку в 0
+    //RANGEFINDER_OUTPUT = 0;
+    //timer_start_us(&timerForPulse, 50);
+    //while(timer_report(&timerForPulse) == WORKING);
+    
+    // Подаем импульс 10 мкс
     RANGEFINDER_OUTPUT = 1;
-    timer_start_ms(&timer, 10);
-    while(timer_report(&timer) != FINISHED);
+    timer_start_us(&timerForPulse, 10);
+    while(timer_report(&timerForPulse) == WORKING);
     RANGEFINDER_OUTPUT = 0;
 }
 
@@ -46,20 +54,29 @@ uint16_t rangefinder_get_range()
 */
 void __attribute__((interrupt, no_auto_psv)) _INT4Interrupt(void)
 {
+    
     enum
     {
         SOUND_SPEED = 340   // м/сек
     };
+    static uint32_t time;
+    
     if ( (RANGEFINDER_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
-        timer_start_ms(&timer, 25);
+        RANGEFINDER_TYPE_OF_INTERRUPT = ENCODER_NEGATIVE_EDGE;
+        
+        //timer_start_ms(&timerForEcho, 100);
+        time = hard_timer_return_time();
+        //range += 10;
     }
     else
     {
-        if( timer_report(&timer) != WORKING)
-            range = 0;
-        else
-            range = (uint32_t)SOUND_SPEED*timer_get_elapsed_time(&timer)/1000 >> 1;
+        RANGEFINDER_TYPE_OF_INTERRUPT = ENCODER_POSITIVE_EDGE;
+        //IFS3bits.INT4IF = 0;      // Очистка флага прерывания
+        range = hard_timer_return_time() - time;
+        
+        //range = (uint32_t)timer_get_elapsed_time(&timerForEcho);
+        //range++;
     }
-    rangefinder_change_type_of_interrupt();
+    IFS3bits.INT4IF = 0;      // Очистка флага прерывания
 }

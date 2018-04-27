@@ -18,7 +18,7 @@ void GPIO_init()
     
     // Rangefinder
     TRISA |= (1 << 15);         // PORTA15 - input (rangefinder input - INT4)
-    TRISD &= ~(1 << 8);         // PORTD8 - output
+    TRISD &= ~(1 << 8);         // PORTD8 - output (rangefinder output)
     PORTD &= ~(1 << 8);         // PORTD8 - низкий уровень (rangefinder output)
     
     // Encoder
@@ -146,40 +146,40 @@ inline void encoder_right_reset_interrupt_flag()
 
 /*
 * @brief Инициализация аппаратного таймера
-* @note Выбран 32-битный таймер TIM23
+* @note Выбран 32-битный таймер TIM89
 */
 void hard_timer_init()
 {
     hardTimerOverflows = 0;
-    T3CONbits.TON = 0;      // Stop any operations Timer3
-    T2CONbits.TON = 0;      // Stop any operations Timer2
-    T2CONbits.T32 = 1;      // Enable 32-bit mode
-    T2CONbits.TCS = 0;      // Select internal instruction clock cycle
-    T2CONbits.TGATE = 0;    // Disable Gates Mode
-    T2CONbits.TCKPS = 0b01; // prescale 1:8 
-    TMR3 =  0x00;           // Clear most significant half word
-    TMR2 =  0x00;           // Clear least significant half word
-    TMR3HLD = 0x00;
-    PR3 = 0xFFFF;           // Timer23 period register
-    PR2 = 0xFFFF;           // Timer23 period register
+    T9CONbits.TON = 0;      // Stop any operations Timer9
+    T8CONbits.TON = 0;      // Stop any operations Timer8
+    T8CONbits.T32 = 1;      // Enable 32-bit mode
+    T8CONbits.TCS = 0;      // Select internal instruction clock cycle
+    T8CONbits.TGATE = 0;    // Disable Gates Mode
+    T8CONbits.TCKPS = 0b01; // prescale 1:8 
+    TMR9 =  0x00;           // Clear most significant half word
+    TMR8 =  0x00;           // Clear least significant half word
+    TMR9HLD = 0x00;
+    PR9 = 0xFFFF;           // Timer period register
+    PR8 = 0xFFFF;           // Timer period register
     
-    IPC2bits.T3IP = 0x05;   // Set Timer3 Interrupt Priority Level
-    IFS0bits.T3IF = 0;      // Clear Timer3 Interrupt Flag
-    IEC0bits.T3IE = 1;      // Enable Timer3 interrupt
+    IPC12bits.T8IP = 0x05;  // Set Timer Interrupt Priority Level
+    IFS3bits.T8IF = 0;      // Clear Timer Interrupt Flag
+    IEC3bits.T8IE = 1;      // Enable Timer interrupt
     
-    T3CONbits.TON = 1;      // Start 32-bit Timer
-    T2CONbits.TON = 1;      // Start 32-bit Timer
+    T9CONbits.TON = 1;      // Start 32-bit Timer
+    T8CONbits.TON = 1;      // Start 32-bit Timer
     
 }
 
 /*
 * @brief Прерывание по переполнению таймера23
 */
-void __attribute__((interrupt,no_auto_psv)) _T3Interrupt( void )
+void __attribute__((interrupt,no_auto_psv)) _T9Interrupt( void )
 {
    	hardTimerOverflows++;
     
-    IFS0bits.T3IF = 0;      // Очистка флага прерывания
+    IFS3bits.T9IF = 0;      // Очистка флага прерывания
 }
 
 /*
@@ -193,10 +193,11 @@ uint8_t hard_timer_return_overflows()
 /*
 * @brief Вернуть время аппаратного таймера
 */
-uint32_t hard_timer_return_time()
+inline uint32_t hard_timer_return_time()
 {
-    uint16_t lsw = TMR2;
-    uint16_t msw = TMR3HLD;
+    uint32_t lsw = TMR8;
+    uint32_t msw = TMR9HLD;
+
     return ((uint32_t)msw << 16) + lsw;
 }
 
@@ -205,9 +206,10 @@ uint32_t hard_timer_return_time()
 */
 void rangefinder_init_interrupt()
 {
-    RANGEFINDER_TYPE_OF_INTERRUPT = 0; // INT4 setup to interupt on rising edge
+    RANGEFINDER_TYPE_OF_INTERRUPT = INTERRUPT_POSITIVE_EDGE;
     IFS3bits.INT4IF = 0;    // INT4 reset interrupt flag 
     IEC3bits.INT4IE = 1;    // INT4 interupt enable
+    IPC13bits.INT4IP = 7;   // priority interrupt level
     
 }
 
@@ -216,8 +218,8 @@ void rangefinder_init_interrupt()
 */
 inline void rangefinder_change_type_of_interrupt()
 {
-    if ( RANGEFINDER_TYPE_OF_INTERRUPT == ENCODER_POSITIVE_EDGE)
-        RANGEFINDER_TYPE_OF_INTERRUPT = ENCODER_NEGATIVE_EDGE;
+    if ( RANGEFINDER_TYPE_OF_INTERRUPT == INTERRUPT_POSITIVE_EDGE)
+        RANGEFINDER_TYPE_OF_INTERRUPT = INTERRUPT_NEGATIVE_EDGE;
     else
-        RANGEFINDER_TYPE_OF_INTERRUPT = ENCODER_POSITIVE_EDGE;
+        RANGEFINDER_TYPE_OF_INTERRUPT = INTERRUPT_POSITIVE_EDGE;
 }

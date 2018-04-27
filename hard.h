@@ -51,6 +51,12 @@ enum
 
 enum
 {
+    INTERRUPT_POSITIVE_EDGE = 0,
+    INTERRUPT_NEGATIVE_EDGE = 1
+};
+
+enum
+{
     US_IN_COUNT = 2,          // кол-во тактов счетчика в 1 мкс 
     US_TO_COUNT_LSHIFT = 1,   // кол-во тактов счетчика в 1 мкс (для сдвига влево <<)
 };

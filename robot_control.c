@@ -26,6 +26,7 @@
 
 #include "robot_control.h"
 #include "math.h"
+#include "text.h"
 #include <stdio.h>  // временное решение
 
 enum Start_data
@@ -59,6 +60,7 @@ typedef struct
 // Глобальные и статические переменные:
 static UART_module* debug;
 static Timer timer; 
+static Timer timerSub; 
 static Robot_data robot =
 {
     .x = 0, .y = 0, .angle = 0, .range = 0, 
@@ -164,6 +166,7 @@ void init_periphery()
     debug = UART_init(UART_1, UART_BAUD_RATE_9600);
     hard_timer_init();
     soft_timer_init(&timer);
+    soft_timer_init(&timerSub);
     rangefinder_init();
 }
 
@@ -200,7 +203,6 @@ void test_uart()
     while(1)
     {
         UART_write_string(debug, "Test UART is succeed\n\r");
-        //UART_transmit(debug, "Test UART is succeed\n\r", 23);
         uint32_t count;
         for (count = 0; count < 3000000; count++);
     }
@@ -212,21 +214,35 @@ void test_uart()
  */
 void test_software_timer() 
 {
-    UART_transmit(debug, "\n\r", 2);
-    uint8_t count;
+    uint8_t count = 0;
     char buffer[12];
-    UART_write_string(debug, "start test 30 sec!\n\r");
-    for (count = 0; count <= 30; count++)
+
+    UART_write_string(debug, "Test 20 sec!\n\r");
+    timer_start_ms(&timer, 20000);
+    while(timer_report(&timer) == WORKING)
     {
+        num2str(count++, buffer); 
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, " sec from 20.\n\r");
         
-        timer_start_ms(&timer, 1000);   // запуск таймера на 1 сек
-        while(timer_report(&timer) == WORKING);
-        sprintf(buffer, "%hhu", count);
+        UART_write_string(debug, "- hard_time: ");
+        num2str(hard_timer_return_time(), buffer); 
         UART_write_string(debug, buffer);
         UART_write_string(debug, "\n\r\0");
-       
+        
+        UART_write_string(debug, "- elapsed time: ");
+        num2str(timer_get_elapsed_time(&timer), buffer); 
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, "\n\r\0");
+        
+        UART_write_string(debug, "- rest time:    ");
+        num2str(timer_get_rest_time(&timer), buffer); 
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, "\n\r\n\r\0");
+        
+        timer_start_ms(&timerSub, 1000);
+        while(timer_report(&timerSub) == WORKING);
     }
-    UART_write_string(debug, "the end!\n\r\n\r");
 }
 
 /* 
@@ -261,15 +277,16 @@ void test_encoder()
 void test_rangefinder()
 {
     rangefinder_give_impulse();
-    uint16_t range = rangefinder_get_range();
+    timer_start_ms(&timer, 100);
+    while(timer_report(&timer) == WORKING);
+    uint32_t range = rangefinder_get_range()*17/200;
     
-    /* КАСТЫЛЬ СНИЗУ: жрет 60 байт (0.2% от максимума) памяти данных!!!!!*/
     char buffer[12];
-    sprintf(buffer, "%lu", range );
-    UART_write_string(debug, buffer, 12);
+    num2str(range, buffer); 
+    UART_write_string(debug, "range = ");
+    UART_write_string(debug, buffer);
     UART_write_string(debug, "\n\r\n\r");
-    /* КАСТЫЛЬ СВЕРХУ: жрет 1307 байт (1.5% от максимума) памяти программы!!!!!*/
     
-    timer_start_ms(&timer, 3000);
+    timer_start_ms(&timer, 500);
     while(timer_report(&timer) == WORKING);
 }
