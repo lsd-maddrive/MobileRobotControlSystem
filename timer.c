@@ -42,15 +42,6 @@ void soft_timer_init(Timer* ptrTimer)
 }
 
 /*
- * @brief Удаление таймера (деструктор)
- * @param ptrTimer - указатель на объект структуры Timer
-*/
-void timer_delete(Timer* ptrTimer)
-{
-    free(ptrTimer);
-}
-
-/*
  * @brief Запуск отчета таймера в мкс
  * @param ptrTimer - указатель на объект структуры Timer
  * @param time_us - время, которое будет отсчитывать таймер, в мкс

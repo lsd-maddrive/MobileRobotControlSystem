@@ -18,21 +18,18 @@ enum TimerStatus
 
 typedef struct 
 {
-    uint32_t startCount;
-    uint8_t  startOverflows;
-    
-    uint32_t restCount;
-    uint8_t  restOverflows;
-    
-    uint32_t endCount;
-    uint8_t  endOverflows;
-    
     uint8_t  status;
+    
+    uint8_t  startOverflows;
+    uint8_t  restOverflows;
+    uint8_t  endOverflows;
+
+    uint32_t startCount;
+    uint32_t restCount;
+    uint32_t endCount;
 } Timer;
 
 void soft_timer_init();                  // конструктор
-void timer_delete(Timer*);              // деструктор
-
 void timer_start_us(Timer*, uint16_t);
 void timer_start_ms(Timer*, uint16_t);
 void timer_continue(Timer*);
