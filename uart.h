@@ -10,6 +10,7 @@
 enum
 {
     UART_DATA_BUFFER_SIZE = 256,    // Размер буфера uart
+    UART_DATA_MAX_NUMBER_OF_BUFFER_BYTE = UART_DATA_BUFFER_SIZE - 1,
 };
 
 typedef enum
@@ -26,9 +27,7 @@ typedef enum
 
 typedef struct 
 {
-    //bool initialized;
-    
-    uint8_t write_big_endian_mode;
+    //uint8_t write_big_endian_mode;
     uint8_t write_buffer[UART_DATA_BUFFER_SIZE];
     uint8_t i_write_head_byte;
     uint8_t i_write_tail_byte;
@@ -54,9 +53,9 @@ typedef struct
 } UART_module;
 
 UART_module* UART_init(Uart_number_t, Uart_boud_rate_t);// Инициализация модуля uart
-void UART_receive(UART_module*, uint8_t*, uint8_t);     // Получение данных по uart
-void UART_transmit(UART_module*, char*, uint8_t);    // Передача данных по uart
-void UART_write_string( UART_module* module, const char *fstring, ... );
+void UART_receive(UART_module*, uint8_t*, uint8_t);     // Получение массива данных по uart
+void UART_transmit(UART_module*, const char*, const uint8_t);    // Передача масства данных по uart
+void UART_write_string( UART_module* module, const char* buffer);   // Передачи строки по uart
 
 
 #endif	/* UART_H */

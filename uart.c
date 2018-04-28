@@ -6,8 +6,6 @@
 
 #define SET_REG_BIT(reg, mask)      ( (reg) |= (mask) )
 #define RESET_REG_BIT(reg, mask)    ( (reg) &= ~(mask) )
-#define HIGH_16( x ) (((x) >> 8) & 0xff)
-#define LOW_16( x )  ((x) & 0xff)
 
 enum
 {
@@ -22,7 +20,7 @@ enum
 volatile UART_module UART_module_base[] = 
 {
     {
-        .write_big_endian_mode = false, .i_write_head_byte = 0, .i_write_tail_byte = 0, 
+        .i_write_head_byte = 0, .i_write_tail_byte = 0, 
         .n_write_bytes_available = 0, .write_overflow = false, .i_read_head_byte = 0,  
         .i_read_tail_byte = 0, .n_read_bytes_available = 0,  .read_overflow = false,
         
@@ -31,7 +29,7 @@ volatile UART_module UART_module_base[] =
         .interrupt_flag_tx_mask = UART1_TX_FLAG, .interrupt_flag_rx_mask = UART1_RX_FLAG
     },
     {
-        .write_big_endian_mode = false, .i_write_head_byte = 0, .i_write_tail_byte = 0, 
+        .i_write_head_byte = 0, .i_write_tail_byte = 0, 
         .n_write_bytes_available = 0, .write_overflow = false, .i_read_head_byte = 0,  
         .i_read_tail_byte = 0, .n_read_bytes_available = 0,  .read_overflow = false,
 
@@ -52,10 +50,6 @@ UART_module* UART_init(Uart_number_t numberOfModule, Uart_boud_rate_t boudRate)
         return NULL;
     
     UART_module* module = &UART_module_base[numberOfModule];
-    
-    //*module->reg_mode &= ~(1 << 15); // UARTx is disabled
-    //*module->reg_mode &= ~(3 << 8);  // TX, RX en; CTS, RTS dis
-    //*module->reg_mode &= ~(1 << 3);  // Standard Speed mode
     
     if(numberOfModule == UART_1)
     {
@@ -213,7 +207,7 @@ void __attribute__( (__interrupt__, auto_psv) ) _U2TXInterrupt()
 /* 
  * @brief передать байт по UART
 */
-void UART_write_byte( UART_module* module, uint8_t byte )
+void UART_write_byte( UART_module* module, const uint8_t byte )
 {
     while ( module->write_overflow );
     
@@ -227,44 +221,34 @@ void UART_write_byte( UART_module* module, uint8_t byte )
 }
 
 /* 
- * @brief передать данные по UART
+ * @brief передать массив данных по UART
 */
-void UART_transmit( UART_module* module, char* buffer, uint8_t length )
+void UART_transmit( UART_module* module, const char* buffer, const uint8_t length )
 {
     if ( module == NULL )
         return;
     
     uint16_t count = 0;
-    for ( count = 0; count < length; count++ ) {
-        if ( module->write_big_endian_mode )
-        {
-            UART_write_byte( module, HIGH_16( buffer[count] ) );
-            UART_write_byte( module, LOW_16( buffer[count] ) );
-        } 
-        else 
-        {
-            UART_write_byte( module, LOW_16( buffer[count] ) );
-            UART_write_byte( module, HIGH_16( buffer[count] ) );
-        }
+    for ( count = 0; count < length; count++ ) 
+    {
+        UART_write_byte( module, buffer[count] );
     }
 }
 
-static char send_buffer[UART_DATA_BUFFER_SIZE];
-
-
-void UART_write_string( UART_module* module, const char *fstring, ... )
+/* 
+ * @brief передать строку по UART
+*/
+void UART_write_string( UART_module* module, const char* buffer)
 {
     if ( module == NULL )
         return;
     
-    int iter = 0;
-    va_list str_args;
-    
-    va_start( str_args, fstring );
-    vsprintf( send_buffer, fstring, str_args );
-    va_end( str_args );
-    
-    while( send_buffer[iter] != '\0' )
-        UART_write_byte( module, send_buffer[iter++] );
+    uint8_t count;
+    while( *buffer != '\0' )
+    {
+        UART_write_byte( module, *(buffer++) );
+        if (count++ == UART_DATA_MAX_NUMBER_OF_BUFFER_BYTE)
+            break;
+    }
 }
  

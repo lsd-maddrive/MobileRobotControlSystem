@@ -52,8 +52,8 @@ int main(void)
     {
         //test_motor_control();     // успешно работает
         //test_uart();              // успешно работает
-        //test_software_timer();    // успешно работает
-        test_rangefinder();         // ?
+        test_software_timer();    // успешно работает
+        //test_rangefinder();         // успешно работает
         //test_encoder();           // ?
     }
     return 0;
