@@ -223,3 +223,31 @@ inline void rangefinder_change_type_of_interrupt()
     else
         RANGEFINDER_TYPE_OF_INTERRUPT = INTERRUPT_POSITIVE_EDGE;
 }
+
+/*
+void capture_init()
+{
+    // Initialize the Input Capture Module
+    IC1CONbits.ICM = 0b00; // Disable Input Capture 1 module
+    IC1CONbits.ICTMR = 1; // Select Timer2 as the IC1 Time base
+    IC1CONbits.ICM = 0b001; // Generate capture event on every edge
+    // Enable Capture Interrupt And Timer2
+    IPC0bits.IC1IP = 1; // Setup IC1 interrupt priority level
+    IFS0bits.IC1IF = 0; // Clear IC1 Interrupt Status Flag
+    IEC0bits.IC1IE = 1; // Enable IC1 interrupt
+}
+
+// Capture Interrupt Service Routine
+unsigned int timePeriod= 0;
+void __attribute__((__interrupt__)) _IC1Interrupt(void)
+{
+    unsigned int t1,t2;
+    t1=IC1BUF;
+    t2=IC1BUF;
+    IFS0bits.IC1IF=0;
+    if(t2>t1)
+        timePeriod = t2-t1;
+    else
+        timePeriod = (PR2 - t1) + t2;
+}
+*/

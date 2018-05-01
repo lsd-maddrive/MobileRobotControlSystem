@@ -27,7 +27,6 @@
 #include "robot_control.h"
 #include "math.h"
 #include "text.h"
-#include <stdio.h>  // временное решение
 
 enum Start_data
 {
@@ -43,25 +42,14 @@ enum Calibration
     PULSES_IN_METER = 1000,
 };
 
-typedef struct 
-{
-    int16_t x;
-    int16_t y;
-    int16_t angle;
-    uint16_t range;
-    uint8_t minSpeed;
-    uint8_t maxSpeed;
-    uint8_t currentSpeed;
-    uint8_t acceleration;
-    uint8_t deceleration;
-} Robot_data;
+
 
 
 // Глобальные и статические переменные:
-static UART_module* debug;
-static Timer timer; 
-static Timer timerSub; 
-static Robot_data robot =
+UART_module* debug;
+Timer timer; 
+Timer timerSub; 
+Robot_data robot =
 {
     .x = 0, .y = 0, .angle = 0, .range = 0, 
     .minSpeed = ROBOT_START_MIN_SPEED,
@@ -168,125 +156,4 @@ void init_periphery()
     soft_timer_init(&timer);
     soft_timer_init(&timerSub);
     rangefinder_init();
-}
-
-/* 
- * @brief Тест работы модуля motor_control на разных мощностях и в разных направлениях
- */
-void test_motor_control() 
-{
-    enum 
-    {
-        NUMBER_OF_SPEED = 18,
-    };
-    int8_t power[NUMBER_OF_SPEED] = 
-    {
-         9,  18,  24,  28,  30,  28,  24,  18,  9, 
-        -9, -18, -24, -28, -30, -28, -24, -18, -9
-    };
-    uint32_t countOfDelay;
-    uint32_t countOfSpeed;
-    for (countOfSpeed = 0; countOfSpeed < NUMBER_OF_SPEED; countOfSpeed++) 
-    {
-        motor_set_power(power[countOfSpeed], MOTOR_LEFT);
-        motor_set_power(power[countOfSpeed], MOTOR_RIGHT);
-        for (countOfDelay = 0; countOfDelay < 400000; countOfDelay++);
-    }
-    motors_stop();
-}
-
-/* 
- * @brief Тест работы модуля uart
- */
-void test_uart() 
-{
-    while(1)
-    {
-        UART_write_string(debug, "Test UART is succeed\n\r");
-        uint32_t count;
-        for (count = 0; count < 3000000; count++);
-    }
-    
-}
-
-/* 
- * @brief Тест модуля software_timer
- */
-void test_software_timer() 
-{
-    uint8_t count = 0;
-    char buffer[12];
-
-    UART_write_string(debug, "Test 20 sec!\n\r");
-    timer_start_ms(&timer, 20000);
-    while(timer_report(&timer) == WORKING)
-    {
-        num2str(count++, buffer); 
-        UART_write_string(debug, buffer);
-        UART_write_string(debug, " sec from 20.\n\r");
-        
-        UART_write_string(debug, "- hard_time: ");
-        num2str(hard_timer_return_time(), buffer); 
-        UART_write_string(debug, buffer);
-        UART_write_string(debug, "\n\r\0");
-        
-        UART_write_string(debug, "- elapsed time: ");
-        num2str(timer_get_elapsed_time(&timer), buffer); 
-        UART_write_string(debug, buffer);
-        UART_write_string(debug, "\n\r\0");
-        
-        UART_write_string(debug, "- rest time:    ");
-        num2str(timer_get_rest_time(&timer), buffer); 
-        UART_write_string(debug, buffer);
-        UART_write_string(debug, "\n\r\n\r\0");
-        
-        timer_start_ms(&timerSub, 1000);
-        while(timer_report(&timerSub) == WORKING);
-    }
-}
-
-/* 
- * @brief Тест работы модуля encoder
- */
-void test_encoder() 
-{
-    int32_t pulsesLeft = encoder_left_get_pulses();
-    int32_t pulsesRight = encoder_right_get_pulses();
-    uint8_t count, countOfDelay;
-    
-    motor_set_power(10, MOTOR_LEFT);
-    motor_set_power(10, MOTOR_RIGHT);
-    for (count = 0; count < 10; count++)
-    {
-        /* КАСТЫЛЬ СНИЗУ: жрет много памяти данных!!!!!*/
-        char buffer[12];
-        sprintf(buffer, "%lu", pulsesLeft);
-        UART_transmit(debug, buffer, 12);
-  
-        sprintf(buffer, "%lu", pulsesRight);
-        UART_transmit(debug, buffer, 12);
-        /* КАСТЫЛЬ СВЕРХУ: жрет много памяти программы!!!!!*/
-        for (countOfDelay = 0; countOfDelay < 400000; countOfDelay++);
-    }
-    motors_stop();
-}
-
-/* 
- * @brief Тест работы модуля rangefinder
- */
-void test_rangefinder()
-{
-    rangefinder_give_impulse();
-    timer_start_ms(&timer, 100);
-    while(timer_report(&timer) == WORKING);
-    uint32_t range = rangefinder_get_range()*17/200;
-    
-    char buffer[12];
-    num2str(range, buffer); 
-    UART_write_string(debug, "range = ");
-    UART_write_string(debug, buffer);
-    UART_write_string(debug, "\n\r\n\r");
-    
-    timer_start_ms(&timer, 500);
-    while(timer_report(&timer) == WORKING);
 }

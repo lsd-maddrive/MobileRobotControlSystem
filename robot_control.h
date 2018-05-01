@@ -12,16 +12,21 @@
 #include "timer.h"
 #include "uart.h"
 
+typedef struct 
+{
+    int16_t x;
+    int16_t y;
+    int16_t angle;
+    uint16_t range;
+    uint8_t minSpeed;
+    uint8_t maxSpeed;
+    uint8_t currentSpeed;
+    uint8_t acceleration;
+    uint8_t deceleration;
+} Robot_data;
+
 void init_periphery();          // Инициализация всей переферии
-
 void turn_around_to(int16_t);   // Поворот на указанный угол
-
-
-void test_motor_control();      // Проверка работы модуля motor_control
-void test_uart();               // Проверка работы модуля uart
-void test_software_timer();     // Проверка работы модуля software_timer
-void test_encoder();            // Проверка работы модуля encoder по uart
-void test_rangefinder();        // Проверка работы модуля rangefinder
 
 #endif	/* ROBOT_CONTROL_H */
 

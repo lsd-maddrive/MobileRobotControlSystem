@@ -40,12 +40,12 @@ typedef struct
     uint8_t n_read_bytes_available;
     uint8_t read_overflow;
     
-    unsigned int* reg_mode;            // UARTx Mode Register
+    volatile unsigned int* reg_mode;            // UARTx Mode Register
     volatile unsigned int* reg_status;          // UARTx Status and Control Register
     volatile unsigned int* reg_receive;         // UARTx Receive Register
     volatile unsigned int* reg_transmit;        // UARTx Transmit Register
-    unsigned int* reg_baud_rate;       // UARTx Baud Rate Register
-    volatile unsigned int* reg_interrupt_flag;  // UARTx Baud Interrupt Flag Register
+    volatile unsigned int* reg_baud_rate;       // UARTx Baud Rate Register
+    volatile volatile unsigned int* reg_interrupt_flag;  // UARTx Baud Interrupt Flag Register
     
     unsigned int interrupt_flag_tx_mask;
     unsigned int interrupt_flag_rx_mask;

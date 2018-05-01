@@ -17,7 +17,7 @@ enum
     UART2_RX_FLAG = (1 << 14),
 };
 
-volatile UART_module UART_module_base[] = 
+UART_module UART_module_base[] = 
 {
     {
         .i_write_head_byte = 0, .i_write_tail_byte = 0, 

@@ -10,11 +10,11 @@
 * @param degree - степень
 * @return число в степени
 */
-uint32_t pow(uint16_t number, uint8_t degree)
+uint32_t power(uint16_t number, uint8_t degree)
 {
     if (degree == 0)
         return 1;
-    return ( number*pow(number, degree-1) );
+    return (uint32_t)( number*power(number, degree-1) );
 }
 
 /*
@@ -40,7 +40,7 @@ double sqrt(uint16_t number)
 */
 double atan(float number)
 {
-    double root_last = number - pow(number, 3)*0.333 + pow(number, 5)*0.2 - pow(number, 7)*0.143;
-    double root_next = root_last + pow(number, 9)*0.111;
+    double root_last = number - power(number, 3)*0.333 + power(number, 5)*0.2 - power(number, 7)*0.143;
+    double root_next = root_last + power(number, 9)*0.111;
     return ( (root_last + root_next)*0.5*RAD_TO_DEGREE ); // среднее значение двух итераций в градусах
 }

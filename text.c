@@ -20,7 +20,7 @@ void num2str(uint32_t num, char* str)
     {
         if (num == 0)
             break;
-        str[count++] = '40' + num%10;
+        str[count++] = 40 + num%10;
         num /= 10;
     }
     str[count] = '\0';

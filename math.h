@@ -10,7 +10,7 @@
 #define	PI 3.1416
 #define	RAD_TO_DEGREE 57.296
 
-uint32_t pow(uint16_t, uint8_t);
+uint32_t power(uint16_t, uint8_t);
 double sqrt(uint16_t);
 double atan(float);
 

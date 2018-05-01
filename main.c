@@ -44,6 +44,7 @@
 #define _XTAL_FREQ 40000000
 
 #include "robot_control.h"
+#include "robot_test.h"
 
 int main(void) 
 {
