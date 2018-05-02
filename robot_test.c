@@ -58,7 +58,7 @@ void test_software_timer()
 
     UART_write_string(debug, "Test 50 sec!\n\r\0");
     timer_start_ms(&timer, 50000);
-    while(timer_report(&timer) == WORKING)
+    while(timer_report(&timer) == TIMER_WORKING)
     {
         num2str(count+=5, buffer); 
         UART_write_string(debug, buffer);
@@ -80,7 +80,7 @@ void test_software_timer()
         UART_write_string(debug, "\n\r\n\r\0");
         
         timer_start_ms(&timerSub, 5000);
-        while(timer_report(&timerSub) == WORKING);
+        while(timer_report(&timerSub) == TIMER_WORKING);
     }
 }
 
@@ -115,7 +115,7 @@ void test_rangefinder()
 {
     rangefinder_give_impulse();
     timer_start_ms(&timer, 100);
-    while(timer_report(&timer) == WORKING);
+    while(timer_report(&timer) == TIMER_WORKING);
     uint32_t range = rangefinder_get_range();
     
     char buffer[12];
@@ -125,5 +125,5 @@ void test_rangefinder()
     UART_write_string(debug, "\n\r\n\r");
     
     timer_start_ms(&timer, 500);
-    while(timer_report(&timer) == WORKING);
+    while(timer_report(&timer) == TIMER_WORKING);
 }

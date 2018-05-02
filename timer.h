@@ -7,14 +7,14 @@
 
 #include "hard.h"
 
-enum TimerStatus
+typedef enum 
 {
-    CREATED,
-    WORKING,
-    WAITING,
-    STOPPED,
-    FINISHED
-};
+    TIMER_CREATED,
+    TIMER_WORKING,
+    TIMER_WAITING,
+    TIMER_STOPPED,
+    TIMER_FINISHED,
+} TimerStatus;
 
 typedef struct 
 {

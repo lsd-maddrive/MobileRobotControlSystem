@@ -29,7 +29,7 @@ inline uint8_t is_timer_end(Timer* ptrTimer, uint32_t nowCount)
 */
 void soft_timer_init(Timer* ptrTimer)
 {
-    ptrTimer->status = CREATED;
+    ptrTimer->status = TIMER_CREATED;
     
     ptrTimer->startCount = 0;
     ptrTimer->startOverflows = 0;
@@ -60,11 +60,11 @@ void timer_start_us(Timer* ptrTimer, uint16_t time_us)
         ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
         ptrTimer->endOverflows = ( (ptrTimer->startCount + ptrTimer->restCount) < ptrTimer->startCount ) ? 1:0;
         
-        ptrTimer->status = WORKING;
+        ptrTimer->status = TIMER_WORKING;
     }
     else
     {
-        ptrTimer->status = FINISHED;
+        ptrTimer->status = TIMER_FINISHED;
     }
 }
 
@@ -92,11 +92,11 @@ void timer_start_ms(Timer* ptrTimer, uint16_t time_ms)
         ptrTimer->endCount = ptrTimer->startCount + ptrTimer->restCount;
         ptrTimer->endOverflows = ptrTimer->startOverflows + ptrTimer->restOverflows;
         
-        ptrTimer->status = WORKING;
+        ptrTimer->status = TIMER_WORKING;
     }
     else
     {
-        ptrTimer->status = FINISHED;
+        ptrTimer->status = TIMER_FINISHED;
     }
 }
 
@@ -107,9 +107,9 @@ void timer_start_ms(Timer* ptrTimer, uint16_t time_ms)
 uint8_t timer_report(Timer* ptrTimer)
 {
     uint32_t nowCount = hard_timer_return_time();
-    if ( ptrTimer->status == WORKING && is_timer_end(ptrTimer, nowCount) )
+    if ( ptrTimer->status == TIMER_WORKING && is_timer_end(ptrTimer, nowCount) )
     {
-        ptrTimer->status = FINISHED;
+        ptrTimer->status = TIMER_FINISHED;
     }
     return ptrTimer->status;
 }
@@ -121,12 +121,12 @@ uint8_t timer_report(Timer* ptrTimer)
 */
 uint32_t timer_get_rest_time(Timer* ptrTimer)
 {
-    if ( ptrTimer->status == WORKING)
+    if ( ptrTimer->status == TIMER_WORKING)
     {
         uint32_t nowCount = hard_timer_return_time();
         if ( is_timer_end(ptrTimer, nowCount) )
         {
-            ptrTimer->status = FINISHED;
+            ptrTimer->status = TIMER_FINISHED;
             return 0;
         }
         else

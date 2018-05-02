@@ -49,13 +49,23 @@
 int main(void) 
 {
     init_periphery();
+    Timer logPeriod; 
+    soft_timer_init(&logPeriod);
+    move_with_obstacle_avoidance_get_coordinates(50, 50);
     while(1)
     {
         //test_motor_control();     // успешно работает
         //test_uart();              // успешно работает
-        test_software_timer();    // успешно работает
+        //test_software_timer();    // успешно работает
         //test_rangefinder();         // успешно работает
         //test_encoder();           // ?
+        
+        //if(move_with_obstacle_avoidance_do() != FINISHED)
+        if(timer_report(&logPeriod) != TIMER_WORKING)
+        {
+            timer_start_ms(&logPeriod, 100);
+            log_transmit();
+        }
     }
     return 0;
 }
