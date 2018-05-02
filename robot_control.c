@@ -235,13 +235,15 @@ void measure_right_border()
                     break;
                 }  
             }
-            intermediatePoint_1.angle = measuredAngle;
-            intermediatePoint_1.range = newRange;
+            robot.angle = measuredAngle;
+            intermediatePoint_2.angle = measuredAngle;
+            intermediatePoint_2.range = newRange;
             return;   // правая граница найдена
         } 
     }
     intermediatePoint_2.angle = robot.angle;
     intermediatePoint_2.range = 0;
+    robot.angle = measuredAngle;
     return; // правая граница не найдена
 }
 /****************************** PRIVATE FUNCTION ******************************/
@@ -377,6 +379,7 @@ void move_with_obstacle_avoidance_get_coordinates(int16_t x, int16_t y)
     robot.status = ROBOT_INITIALIZED;
 }
 
+/*
 Robot_status move_with_obstacle_avoidance_do()
 {
     enum Step
@@ -412,7 +415,7 @@ Robot_status move_with_obstacle_avoidance_do()
                 stepCount++;
                 break;
             }
-            case STEP_2_MOVE_FORWARD:
+            case STEP_2_MOVE_FORWARD:   // остановится, если обнаружит препятствие или достигнет цели
             {
                 int16_t dx = target.x - robot.x;
                 int16_t dy = target.y - robot.y;
@@ -421,6 +424,26 @@ Robot_status move_with_obstacle_avoidance_do()
                 break;
             }
             case STEP_3_MEASURE_LEFT_BORDER:
+            {
+                measure_left_border();  // измеренные значения сохраняются в intermediatePoint_1
+                stepCount++;
+                break;
+            }
+            case STEP_4_ROTATE_TO_ANGLE:
+            {
+                int16_t dx = target.x - robot.x;
+                int16_t dy = target.y - robot.y;
+                turn_around_to( calculate_angle(dx, dy) );
+                stepCount++;
+                break;
+            }
+            case STEP_5_MEASURE_RIGTH_BORDER:
+            {
+                measure_left_border();  // измеренные значения сохраняются в intermediatePoint_2
+                stepCount++;
+                break;
+            }
+            case STEP_6_CALCULATE_INTERMEDIATE_POINTS:
             {
                 measure_left_border();
                 stepCount++;
@@ -442,7 +465,7 @@ Robot_status move_with_obstacle_avoidance_do()
     }
     return 0;   // change
 }
-
+*/
 /* 
  * @brief Передача по uart информацию о роботе (первые 10 байт структуры robot)
  */
