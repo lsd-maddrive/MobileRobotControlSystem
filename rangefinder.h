@@ -10,7 +10,7 @@
 
 void rangefinder_init();            // Инициализация датчика
 void rangefinder_give_impulse();    // Подать импульс на датчик
-uint16_t rangefinder_get_range();   // Получить измеренное расстояние
+uint16_t rangefinder_get_range();   // Получить измеренное расстояние (в мм)
 
 #endif	/* RANGEFINDER_H */
 

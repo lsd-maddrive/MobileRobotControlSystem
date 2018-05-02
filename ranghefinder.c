@@ -30,21 +30,21 @@ void rangefinder_give_impulse()
     // Заблаговременно устанавливаем ножку в 0
     RANGEFINDER_OUTPUT = 0;
     timer_start_us(&timerForPulse, 5);
-    while(timer_report(&timerForPulse) == WORKING);
+    while(timer_report(&timerForPulse) == TIMER_WORKING);
     
     // Подаем импульс 10 мкс
     RANGEFINDER_OUTPUT = 1;
     timer_start_us(&timerForPulse, 10);
-    while(timer_report(&timerForPulse) == WORKING);
+    while(timer_report(&timerForPulse) == TIMER_WORKING);
     RANGEFINDER_OUTPUT = 0;
 }
 
 /*
-* @brief Получить измеренное расстояние
+* @brief Получить измеренное расстояние (в мм)
 */
 uint16_t rangefinder_get_range()
 {
-    return range;
+    return (float)range*0.085 + 14.3;
 }      
 
 /*
