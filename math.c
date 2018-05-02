@@ -44,3 +44,47 @@ double atan(float number)
     double root_next = root_last + power(number, 9)*0.111;
     return ( (root_last + root_next)*0.5*RAD_TO_DEGREE ); // среднее значение двух итераций в градусах
 }
+
+/*
+* @brief Грубый расчет синуса по ряду Тейлора
+* @param a - угол в градусах
+* @return sin
+*/
+float sin(int a)
+{
+    float x = a*DEGREE_TO_RAD;
+    float buf = x*x*x*0.166667;
+    float answer = x - buf;
+    
+    buf *= x*x*0.05;
+    answer += buf;
+    
+    buf *= x*x*0.02381;
+    answer -= buf;
+    
+    return answer;
+}
+
+
+/*
+* @brief Грубый расчет косинуса по ряду Тейлора
+* @param a - угол в градусах
+* @return cos
+*/
+float cos(int a)
+{
+    float x = a*DEGREE_TO_RAD;
+    float buf = x*x*0.5;
+    float answer = 1 - buf;
+    
+    buf *= x*x*0.083333;
+    answer += buf;
+    
+    buf *= x*x*0.033333;
+    answer -= buf;
+    
+    buf *= x*x*0.017857;
+    answer += buf;
+    
+    return answer;
+}
