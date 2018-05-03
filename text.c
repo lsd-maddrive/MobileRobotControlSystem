@@ -12,15 +12,17 @@
 */
 #include "text.h"
 
-void num2str(uint32_t num, char* str)
+void num2str(int32_t num, char* str)
 {
     uint8_t count = 0;
     char buf;
+    if (num < 0)
+        num = -num;
     while(1)
     {
         if (num == 0)
             break;
-        str[count++] = 40 + num%10;
+        str[count++] = '0' + num%10;
         num /= 10;
     }
     str[count] = '\0';

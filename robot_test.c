@@ -92,28 +92,36 @@ void test_encoder()
     int32_t pulsesLeft;
     int32_t pulsesRight;
     uint8_t count, countOfDelay;
-    encoders_reset_angle();
+    //encoders_reset_angle();
     
     motor_set_power(10, MOTOR_LEFT);
     motor_set_power(10, MOTOR_RIGHT);
     for (count = 0; count < 10; count++)
     {
-        char buffer[12];
+        char buffer[12] = {0, 0, 0, 0, 0, 0, 0};
         pulsesLeft = encoder_left_get_pulses();
         pulsesRight = encoder_right_get_pulses();
         
+        UART_transmit(debug, "left:  ", 8);
         num2str(pulsesLeft, buffer);
         UART_transmit(debug, buffer, 12);
+        UART_transmit(debug, "\n\r", 2);
+        
+        uint8_t countErase;
+        for (countErase = 0; countErase < 12; countErase++)
+            buffer[countErase] = 0;
   
+        UART_transmit(debug, "right:   ", 8);
         num2str(pulsesRight, buffer);
         UART_transmit(debug, buffer, 12);
+        UART_transmit(debug, "\n\r", 2);
         
         timer_start_ms(&timer, 1000);
-        while(timer_report == TIMER_WORKING);
+        while(timer_report(&timer) == TIMER_WORKING);
     }
     motors_stop();
-    timer_start_ms(&timer, 4000);
-    while(timer_report == TIMER_WORKING);
+    //timer_start_ms(&timer, 4000);
+    //while(timer_report(&timer) == TIMER_WORKING);
 }
 
 /* 

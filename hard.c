@@ -23,7 +23,7 @@ void GPIO_init()
     
     // Encoder
     TRISE |= (1 << 8) |         // PORTE8 - input (encoder2 - INT1)
-             (1 << 9);          // PORTE8 - input (encoder2)
+             (1 << 9);          // PORTE9 - input (encoder2)
     TRISF |= (1 << 6) |         // PORTF6 - input (encoder1 - INT0)
              (1 << 7);          // PORTF7 - input (encoder1)
 }
@@ -84,16 +84,17 @@ void PWM_set(uint8_t duty_cycle, uint8_t pin)
 }
 
 /*
-* @brief Инициализация внешнего прерывание энкодеров - INT0 и INT1
+* @brief Инициализация внешнего прерывание энкодеров - INT0 и INT2
 */
 void encoders_interrupt_init()
 {
+    AD1PCFGL = 0x1fff; 
     INTCON2 &= ~0x0003;     // INT0 and INT1 setup to interupt on rising edge
     IFS0bits.INT0IF = 0;    // INT0 reset interrupt flag 
     IEC0bits.INT0IE = 1;    // INT0 interupt enable
     
-    IFS1bits.INT1IF = 0;    // INT1 reset interrupt flag 
-    IEC1bits.INT1IE = 0;    // INT1 interupt enable
+    IFS1bits.INT2IF = 0;    // INT2 reset interrupt flag 
+    IEC1bits.INT2IE = 1;    // INT2 interupt enable
 }
 
 /*
@@ -114,7 +115,7 @@ void encoder_left_change_type_of_interrupt()
 */
 void encoder_right_change_type_of_interrupt()
 {
-    if ( (ENCODER_LEFT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
+    if ( (ENCODER_RIGHT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
         ENCODER_RIGHT_TYPE_OF_INTERRUPT = ENCODER_NEGATIVE_EDGE;
     else
         ENCODER_RIGHT_TYPE_OF_INTERRUPT = ENCODER_POSITIVE_EDGE;

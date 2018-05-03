@@ -7,7 +7,7 @@
 
 #include <xc.h>
 
-void num2str(uint32_t, char*);
+void num2str(int32_t, char*);
 
 
 #endif	/* TEXT_H */
