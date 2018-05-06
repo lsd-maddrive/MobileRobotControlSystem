@@ -2,13 +2,20 @@
  * File:   main.c
  */
 #include "encoder.h"
+#include "uart.h"
 
 /* Принцип работы энкодера:
  * У энкодеров по 4 ножки:
- * - PIN_x_1 (оранжевый) = RF6 (left), RE8 (right)
- * - PIN_x_2 (зеленый) = RF7 (left), RE9 (right)
+ * - PIN_x_1 (оранжевый)
+ * - PIN_x_2 (зеленый)
  * - GND (желтый)
  * - VCC (белый)
+ * Left encoder:
+ * PIN_1 = RF6 = INT0
+ * PIN_1 = RF7
+ * Right encoder:
+ * PIN_1 = RF8 = AN20 = INT1
+ * PIN_1 = RF9 = AN21 
  * Если энкодер поворачивается, на ножках генерируются импульсы, 
  * Нужно внешнее прерывание на изменение уровня одной из ножек.
  * Во время прерывания проверяем состояние второй ноги.
@@ -16,6 +23,7 @@
 
 volatile int16_t pulsesLeft;
 volatile int16_t pulsesRight;
+extern UART_module* debug;
 
 
 /*
@@ -33,6 +41,7 @@ void encoders_init()
 */
 void __attribute__((interrupt, no_auto_psv)) _INT0Interrupt(void)
 {
+    UART_transmit(debug, "kek1", 4);
     if ( (ENCODER_LEFT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
         if (ENCODER_LEFT_PIN2 == 1)
@@ -57,6 +66,7 @@ void __attribute__((interrupt, no_auto_psv)) _INT0Interrupt(void)
 */
 void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void)
 {
+    UART_transmit(debug, "kek2", 4);
     if ( (ENCODER_RIGHT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
         if (ENCODER_RIGHT_PIN2 == 1)

@@ -12,6 +12,9 @@ static uint8_t hardTimerOverflows;
 */
 void GPIO_init()
 {
+    // Anolog or Digit
+    AD1PCFGH = 0xffff; 
+    AD1PCFGL = 0xffff;
     // A0
     TRISA &= ~(1 << 0);         // PORTA0 - output
     PORTA |= (1 << 0);          // PORTA0 - высокий уровень
@@ -88,13 +91,12 @@ void PWM_set(uint8_t duty_cycle, uint8_t pin)
 */
 void encoders_interrupt_init()
 {
-    AD1PCFGL = 0x1fff; 
     INTCON2 &= ~0x0003;     // INT0 and INT1 setup to interupt on rising edge
     IFS0bits.INT0IF = 0;    // INT0 reset interrupt flag 
     IEC0bits.INT0IE = 1;    // INT0 interupt enable
     
-    IFS1bits.INT2IF = 0;    // INT2 reset interrupt flag 
-    IEC1bits.INT2IE = 1;    // INT2 interupt enable
+    IFS1bits.INT1IF = 0;    // INT1 reset interrupt flag 
+    IEC1bits.INT1IE = 1;    // INT1 interupt enable
 }
 
 /*
