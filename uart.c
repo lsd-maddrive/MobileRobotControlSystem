@@ -39,6 +39,8 @@ UART_module UART_module_base[] =
     }
 };
 
+UART_module* debug;
+
 /* 
  * @brief Инициализация модуля UART
  * @return указатель на объект структуры UART_module_config_t

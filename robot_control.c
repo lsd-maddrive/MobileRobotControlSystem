@@ -67,7 +67,7 @@ typedef struct
 
 
 // Глобальные и статические переменные:
-UART_module* debug;
+extern UART_module* debug;
 Timer timer; 
 Timer timerSub;
 Robot_data robot =
