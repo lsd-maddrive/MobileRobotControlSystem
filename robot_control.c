@@ -49,8 +49,9 @@ enum Calibration
     ROBOT_HALF_WIDTH = ROBOT_WIDTH >> 1,
     ROBOT_HALF_LENGTH = ROBOT_LENGTH >> 1,
     // Характеристики энкодера:
-    PULSES_IN_REVOLUTION = 400,
-    PULSES_IN_CM = 5,
+    PULSES_IN_REVOLUTION_OF_ROTOR = 100,
+    PULSES_IN_360_DEGREE = 2,
+    PULSES_IN_CM = 6, // в теории (если коэф. сцепления = 1) = 5.79
     // Характеристики дальномера:
     RANGEFINDER_ANGLE = 15,
     RANGEFINDER_HALF_ANGLE = 7,
@@ -253,13 +254,13 @@ void turn_around_by(int16_t angle)
     {
         motor_set_power(robot.minSpeed,  MOTOR_LEFT);
         motor_set_power(-robot.minSpeed, MOTOR_RIGHT);
-        needPulses = PULSES_IN_REVOLUTION*angle/360;  
+        needPulses = PULSES_IN_360_DEGREE*angle/360;  
     }
     else if ( angle < 0) // поворот против часовой
     {
         motor_set_power(-robot.minSpeed, MOTOR_LEFT);
         motor_set_power(robot.minSpeed,  MOTOR_RIGHT);
-        needPulses = PULSES_IN_REVOLUTION*(-1*angle)/360;
+        needPulses = PULSES_IN_360_DEGREE*(-1*angle)/360;
     }
     else
     {
@@ -519,10 +520,38 @@ void move_with_obstacle_avoidance_do()
  */
 void log_transmit()
 {
-    uint8_t arrOfData[10];
-    memcpy(arrOfData, &robot, 10);
-    UART_transmit(debug, "log: ", 5);
-    UART_transmit(debug, arrOfData, 10);
-    UART_transmit(debug, "\n\r", 2);
+    //uint8_t arrOfData[10];
+    //memcpy(arrOfData, &robot, 10);
+    //UART_transmit(debug, arrOfData, 10);
+    //UART_transmit(debug, "\n\r", 2);
+    
+    char buf[12];
+    UART_transmit(debug, "log:\n\r", 6);
+    
+    num2str(robot.status, buf);
+    UART_write_string(debug, "\r\nstatus: ");
+    UART_write_string(debug, buf);
+    
+    num2str(robot.x, buf);
+    UART_write_string(debug, "\r\nrobot.x: ");
+    UART_write_string(debug, buf);
+    
+    num2str(robot.y, buf);
+    UART_write_string(debug, "\r\nrobot.y: ");
+    UART_write_string(debug, buf);
+    
+    num2str(target.x, buf);
+    UART_write_string(debug, "\r\ntarget.x: ");
+    UART_write_string(debug, buf);
+    
+    num2str(target.y, buf);
+    UART_write_string(debug, "\r\ntarget.y: ");
+    UART_write_string(debug, buf);
+    
+    num2str(robot.angle, buf);
+    UART_write_string(debug, "\r\nrobot.angle: ");
+    UART_write_string(debug, buf);
+    
+    UART_write_string(debug, "\r\n");
 }
 /****************************** PUBLIC FUNCTION *******************************/

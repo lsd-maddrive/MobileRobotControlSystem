@@ -57,14 +57,15 @@ int main(void)
         //test_motor_control();     // успешно работает
         //test_uart();              // успешно работает
         //test_software_timer();    // успешно работает
-        //test_rangefinder();       // успешно работает
-        test_encoder();             // успешно работает
+        test_rangefinder();       // успешно работает
+        //test_encoder();             // успешно работает
         //if(move_with_obstacle_avoidance_do() != FINISHED)
+        //test_turn_around_by();
         
         if(timer_report(&logPeriod) != TIMER_WORKING)
         {
             timer_start_ms(&logPeriod, 500);
-            log_transmit();
+            //log_transmit();
         }
         
     }

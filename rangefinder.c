@@ -52,10 +52,6 @@ uint16_t rangefinder_get_range()
 */
 void __attribute__((interrupt, no_auto_psv)) _INT4Interrupt(void)
 {
-    enum
-    {
-        SOUND_SPEED = 340   // м/сек
-    };
     static uint32_t lastTime;
     uint32_t nowTime = hard_timer_return_time();
     

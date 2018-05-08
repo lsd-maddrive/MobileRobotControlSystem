@@ -133,10 +133,17 @@ void test_rangefinder()
     
     char buffer[12];
     num2str(range, buffer); 
-    UART_write_string(debug, "range = ");
+    UART_write_string(debug, "\nrange = ");
     UART_write_string(debug, buffer);
     UART_write_string(debug, "\n\r\n\r");
     
     timer_start_ms(&timer, 500);
+    while(timer_report(&timer) == TIMER_WORKING);
+}
+
+void test_turn_around_by()
+{
+    turn_around_by(360);
+    timer_start_ms(&timer, 5000);
     while(timer_report(&timer) == TIMER_WORKING);
 }

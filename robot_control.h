@@ -14,10 +14,10 @@
 
 typedef enum 
 {
-    ROBOT_INITIALIZED = 0,
-    ROBOT_IN_PROGRESS = 1,
-    ROBOT_FINISHED = 2,
-    ROBOT_CANT_MOVE = 3,
+    ROBOT_INITIALIZED = 1,
+    ROBOT_IN_PROGRESS = 2,
+    ROBOT_FINISHED = 3,
+    ROBOT_CANT_MOVE = 4,
 } Robot_status;
 
 typedef struct 

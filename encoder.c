@@ -41,7 +41,6 @@ void encoders_init()
 */
 void __attribute__((interrupt, no_auto_psv)) _INT0Interrupt(void)
 {
-    UART_transmit(debug, "kek1", 4);
     if ( (ENCODER_LEFT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
         if (ENCODER_LEFT_PIN2 == 1)
@@ -66,7 +65,6 @@ void __attribute__((interrupt, no_auto_psv)) _INT0Interrupt(void)
 */
 void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void)
 {
-    UART_transmit(debug, "kek2", 4);
     if ( (ENCODER_RIGHT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
         if (ENCODER_RIGHT_PIN2 == 1)
