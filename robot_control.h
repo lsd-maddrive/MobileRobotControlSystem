@@ -41,8 +41,9 @@ void turn_around_to(int16_t angle);     // Поворот на указанны�
 void move_to(int16_t x, int16_t y);     // Движение к указанной координате
 
 void init_periphery();                  // Инициализация всей переферии
+
 void move_with_obstacle_avoidance_get_coordinates(int16_t x, int16_t y);
-Robot_status move_with_obstacle_avoidance_do();
+void move_with_obstacle_avoidance_do();
 
 void log_transmit();
 
