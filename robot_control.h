@@ -17,6 +17,7 @@ typedef enum
     ROBOT_INITIALIZED = 0,
     ROBOT_IN_PROGRESS = 1,
     ROBOT_FINISHED = 2,
+    ROBOT_CANT_MOVE = 3,
 } Robot_status;
 
 typedef struct 

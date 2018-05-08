@@ -14,8 +14,9 @@
 uint32_t power(uint16_t, uint8_t);
 double sqrt(uint16_t);
 double atan(float);
-float sin(int a);
-float cos(int a);
+float sin(int16_t a);
+float cos(int16_t a);
+//uint16_t abs(int16_t num);
 
 #endif	/* MATH_H */
 

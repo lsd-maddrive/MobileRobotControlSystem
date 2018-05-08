@@ -43,13 +43,33 @@ enum Initial_data
 
 enum Calibration
 {
-    PULSES_IN_REVOLUTION = 500,
-    PULSES_IN_CM = 10,
-    ROBOT_WIDTH = 200,  // 20 см
-    ROBOT_LENGTH = 300,  // 30 см
+    // Характеристики робота:
+    ROBOT_WIDTH = 300,  // 30 см
+    ROBOT_LENGTH = 400,  // 40 см
     ROBOT_HALF_WIDTH = ROBOT_WIDTH >> 1,
     ROBOT_HALF_LENGTH = ROBOT_LENGTH >> 1,
+    // Характеристики энкодера:
+    PULSES_IN_REVOLUTION = 400,
+    PULSES_IN_CM = 5,
+    // Характеристики дальномера:
+    RANGEFINDER_ANGLE = 15,
+    RANGEFINDER_HALF_ANGLE = 7,
+    RANGEFINDER_MAX_DISTANCE = 1000, // 100 см (по datasheet 4 - 4.5 метра)
+    // Другие характеристики:
     OBSTACLE_DANGEROUS_DISTANCE = 500,  // 50 см
+};
+
+// Сканирование пространства:
+enum
+{
+    MAX_ANGLE_OF_ROTATION_WHEN_MEASURE = 45,    // 45 градусов
+    ANGLE_OF_ROTATION_WHEN_MEASURE = 5,         // 5 градусов
+    NUMBER_OF_MEASUREMENTS_LEFT = 45/5 + 1,
+    NUMBER_OF_MEASUREMENTS_RIGHT = 45/5,
+    NUMBER_OF_MEASUREMENTS_ALL = NUMBER_OF_MEASUREMENTS_LEFT + NUMBER_OF_MEASUREMENTS_RIGHT,
+    
+    RADIUS_OF_OBSTACLE_SEARCH = 500,
+    RADUIS_OF_MOVEMENT = 250,
 };
 
 typedef struct 
@@ -58,15 +78,7 @@ typedef struct
     int16_t y;
 } Target_point;
 
-typedef struct 
-{
-    uint16_t range;
-    int16_t angle;
-} Measured_point;
-
-
-
-// Глобальные и статические переменные:
+/************************* GLOBAL AND STATIC VARIABLES ************************/
 extern UART_module* debug;
 Timer timer; 
 Timer timerSub;
@@ -84,14 +96,9 @@ static Target_point target =
 {
     .x = 0, .y = 0
 };
-static Measured_point intermediatePoint_1 = 
-{
-    .range = 0, .angle = 0
-};
-static Measured_point intermediatePoint_2 = 
-{
-    .range = 0, .angle = 0
-};
+/************************* GLOBAL AND STATIC VARIABLES ************************/
+
+
 
 /****************************** PRIVATE FUNCTION ******************************/
 /* 
@@ -152,99 +159,84 @@ uint16_t getMedianRange()
 }
 
 /* 
- * @brief Определение курсового угла и расстояния до левого края препятствия
- * @note Предполагается, что диаметральная плоскость робота проходит через препятствие,
- * @note т.е. для наискорейшего нахождения левой границы нужно поворачивать против часовой.
+ * @brief Определение массива показаний дальномера слева от курсового угла
+ * @param указатель на массив расстояний
  */
-void measure_left_border()
+void measure_left(uint16_t* arrRanges)
 {
-    enum
+    // Поворачиваемся в крайнее левое положение
+    turn_around_by(-MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
+    
+    // Измеряем массив расстояний
+    uint8_t countAngle;
+    for (countAngle = 0; countAngle < NUMBER_OF_MEASUREMENTS_LEFT; countAngle++)
     {
-        MAX_DIF_RANGE = 300,    // 30 см
-        MAX_DIF_ANGLE = 60,     // 60 градусов
-        ITERATION_DIF_ANGLE = 5,// 5 градуса
-    };
-    int16_t initialAngle = robot.angle;
-    int16_t measuredAngle = robot.angle;
-    uint16_t oldRange = getMedianRange();
-    uint16_t newRange;
-    while(measuredAngle - initialAngle > MAX_DIF_ANGLE)
-    {
-        measuredAngle -= ITERATION_DIF_ANGLE; 
-        turn_around_by(-ITERATION_DIF_ANGLE);
-        oldRange = newRange;
-        newRange = getMedianRange();
-        if (newRange - oldRange > MAX_DIF_RANGE)
-        {
-            uint8_t count;
-            for(count = 0; count < ITERATION_DIF_ANGLE; count++)
-            {
-                turn_around_by(1);
-                oldRange = newRange;
-                newRange = getMedianRange();
-                if (oldRange - newRange < MAX_DIF_RANGE)
-                {
-                    measuredAngle += count;
-                    break;
-                }  
-            }
-            intermediatePoint_1.angle = measuredAngle;
-            intermediatePoint_1.range = newRange;
-            return;   // левая граница найдена
-        } 
+        turn_around_by(ANGLE_OF_ROTATION_WHEN_MEASURE);
+        *(arrRanges++) = getMedianRange();
     }
-    intermediatePoint_1.angle = robot.angle;
-    intermediatePoint_1.range = 0;
-    return; // левая граница не найдена
 }
 
 /* 
- * @brief Определение курсового угла и расстояния до правого края препятствия
- * @note Предполагается, что диаметральная плоскость робота проходит через препятствие,
- * @note т.е. для наискорейшего нахождения правой границы нужно поворачивать по часовой.
+ * @brief Определение массива показаний дальномера справа от курсового угла
+ * @param указатель на массив расстояний
  */
-void measure_right_border()
+void measure_right(uint16_t* arrRanges)
+{
+    // Поворачиваемся в крайнее правое положение
+    turn_around_by(+MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
+    
+    // Запись данных с конца массива
+    arrRanges += NUMBER_OF_MEASUREMENTS_RIGHT;
+    
+    // Измеряем массив расстояний
+    uint8_t countAngle;
+    for (countAngle = 0; countAngle <= 10; countAngle++)
+    {
+        turn_around_by(-ANGLE_OF_ROTATION_WHEN_MEASURE);
+        *(arrRanges--) = getMedianRange();
+    }
+}
+
+/* 
+ * @brief Вовзвращает 1, если будет обнаружено препятствие, иначе 0
+ * @param указатель на массив расстояний
+ * @return 1, если обнаружено препятствие, 0, если препятствия нет
+ */
+uint8_t is_there_obstacle(uint16_t* arrRanges)
+{
+    uint8_t count;
+    for(count = 0; count < NUMBER_OF_MEASUREMENTS_ALL; count++)
+    {
+        if (arrRanges[count] < RADIUS_OF_OBSTACLE_SEARCH)
+            return 1;
+    }
+    return 0;
+}
+
+/* 
+ * @brief Проверка на совпадение координат робота и цели
+ * @return 1, если координаты совпадают с небольшой погрешностью, иначе 0
+ */
+uint8_t is_robot_in_target()
 {
     enum
     {
-        MAX_DIF_RANGE = 300,    // 30 см
-        MAX_DIF_ANGLE = 60,     // 60 градусов
-        ITERATION_DIF_ANGLE = 5,// 5 градуса
+        ALLOWABLE_FAULT = 50, // 5 см
     };
-    int16_t initialAngle = robot.angle;
-    int16_t measuredAngle = robot.angle;
-    uint16_t oldRange = getMedianRange();
-    uint16_t newRange;
-    while(measuredAngle - initialAngle > MAX_DIF_ANGLE)
-    {
-        measuredAngle += ITERATION_DIF_ANGLE; 
-        turn_around_by(+ITERATION_DIF_ANGLE);
-        oldRange = newRange;
-        newRange = getMedianRange();
-        if (newRange - oldRange > MAX_DIF_RANGE)
-        {
-            uint8_t count;
-            for(count = 0; count < ITERATION_DIF_ANGLE; count++)
-            {
-                turn_around_by(-1);
-                oldRange = newRange;
-                newRange = getMedianRange();
-                if (oldRange - newRange < MAX_DIF_RANGE)
-                {
-                    measuredAngle -= count;
-                    break;
-                }  
-            }
-            robot.angle = measuredAngle;
-            intermediatePoint_2.angle = measuredAngle;
-            intermediatePoint_2.range = newRange;
-            return;   // правая граница найдена
-        } 
-    }
-    intermediatePoint_2.angle = robot.angle;
-    intermediatePoint_2.range = 0;
-    robot.angle = measuredAngle;
-    return; // правая граница не найдена
+    uint16_t dx, dy;
+    /*to do: abs()*/
+    dx = robot.x - target.x;
+    if (dx < 0)
+        dx = -dx;
+    /*to do: abs()*/
+    dy = robot.y - target.y;
+    if (dy< 0)
+        dy = -dy;
+    
+    if(dx <= ALLOWABLE_FAULT && dy <= ALLOWABLE_FAULT)
+        return 1;
+    return 0;
+        
 }
 /****************************** PRIVATE FUNCTION ******************************/
 
@@ -274,6 +266,7 @@ void turn_around_by(int16_t angle)
         return;
     }
     while(encoder_right_get_pulses() < needPulses);
+    /*to do: плавное ускорение, замедление*/
     motors_stop();
     robot.angle =+ angle;
 }
@@ -288,30 +281,46 @@ void turn_around_to(int16_t angle)
 
 /* 
  * @brief Прямолинейное движение вперед на указанное расстояние (в см)
- * @note с П-регулятором
+ *
+ * @note В цикле выполяются следующие 4 действия, пока среднее кол-во импульсов
+ * на энкодерах не будет больше или равно, чем нужно.
+ * 1. Пассивная проверка на наличие препятствие, т.е. сравнение показания
+ * дальномера с критическим значением при включенном двигателе. Если датчик
+ * обнаружит препятствие, то запускается активная проверка.
+ * 2. Активная проверка, т.е. полная остановка двигателя с выполнением 3-ех
+ * считываний показаний дальномера. Если медианное значение дальности среди
+ * считанных значений меньше критического, тогда цикл останавливается, а 
+ * координаты робота обновляются фактическими. Иначе - продолжаем цикл.
+ * 3. Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
+ * двигателей с помощью П регулятора.
+ * 4. Плавное изменение скорости двигателей от минимальной к максимальной и
+ * обратно.
+ *
  * @param distance - расстояние (в см)
  */
 void move_forward(uint16_t distance)
 {
     // Константы, полученные эмпирическим путем:
-    const uint8_t PULSES_HYSTERESIS = 10;
+    const uint8_t PULSES_HYSTERESIS = 2;
     const float PROPORTIONAL_REGULATOR = 0.2;
     
+    // Инициализация переменных исходными значениями:
     const uint16_t needPulses = PULSES_IN_CM*distance;
     uint16_t nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
     uint8_t speedChange = 0;
     robot.range = 0;
     
+    // Основной цикл:
     while(nowPulses < needPulses)
     {
-        // Пассивная проверка на наличие препятствия (не влияет на движение робота):
+        // 1. Пассивная проверка на наличие препятствия (не влияет на движение робота):
         if (timer_report(&timer) != TIMER_WORKING)
         {
             rangefinder_give_impulse();
             timer_start_ms(&timer, 100);
             robot.range = rangefinder_get_range();
         }
-        // Активная проверка на наличие препятствия (робот остановливается):
+        // 2. Активная проверка на наличие препятствия (робот остановливается):
         if (robot.range < OBSTACLE_DANGEROUS_DISTANCE)
         {
             motors_stop();
@@ -321,7 +330,7 @@ void move_forward(uint16_t distance)
                 break;
             }
         }
-        // Алгоритм подстройки скорости двигателей:
+        // 3. Сохранение прямолинейности движения:
         if( (encoder_left_get_pulses() > (encoder_right_get_pulses() + PULSES_HYSTERESIS) ) ||
             ( encoder_right_get_pulses() > (encoder_left_get_pulses() + PULSES_HYSTERESIS) ) )
         {
@@ -335,6 +344,8 @@ void move_forward(uint16_t distance)
             motor_set_power(robot.minSpeed - speedChange, MOTOR_RIGHT);
         }
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
+        
+        /* to do: 4. Плавное изменение скорости двигателей*/
     }
     motors_stop();
     robot.x = sin(robot.angle)*distance;
@@ -372,6 +383,9 @@ void init_periphery()
     rangefinder_init();
 }
 
+/* 
+ * @brief Задать координаты для движения без столкновения с препятствиями
+ */
 void move_with_obstacle_avoidance_get_coordinates(int16_t x, int16_t y)
 {
     target.x = x;
@@ -379,93 +393,127 @@ void move_with_obstacle_avoidance_get_coordinates(int16_t x, int16_t y)
     robot.status = ROBOT_INITIALIZED;
 }
 
-/*
-Robot_status move_with_obstacle_avoidance_do()
+/* 
+ * @brief Движение без столкновения с препятствиями
+ */
+void move_with_obstacle_avoidance_do()
 {
     enum Step
     {
-        STEP_1_ROTATE_TO_ANGLE = 1,
-        STEP_2_MOVE_FORWARD = 2,
-        STEP_3_MEASURE_LEFT_BORDER = 3,
-        STEP_4_ROTATE_TO_ANGLE = 4,
-        STEP_5_MEASURE_RIGTH_BORDER = 5,
-        STEP_6_CALCULATE_INTERMEDIATE_POINTS = 6,
-        STEP_7_ROTATE_TO_ANGLE = 7,
-        STEP_8_MOVE_FORWARD = 8,
-        STEP_9_ROTATE_TO_ANGLE = 9,
-        STEP_10_MOVE_FORWARD = 10,
-        STEP_11_ROTATE_TO_ANGLE = 11,
-        STEP_12_MEASURE_BOARD = 12,
-        STEP_13_CALCULATE_INTERMEDIATE_POINTS = 13,
-        STEP_14_ROTATE_TO_ANGLE = 14,
-        STEP_15_MOVE_FORWARD = 15,
-        STEP_16_ROTATE_TO_ANGLE = 16,
-        STEP_17_MOVE_FORWARD = 17,
+        STEP_1_IS_ROBOT_IN_TARGET = 1,
+        STEP_2_MEASURE_LEFT = 2,
+        STEP_3_MEASURE_RIGHT = 3,
+        STEP_4_IS_THERE_OBSTACLE = 4,
+        STEP_5_ROTATE = 5,
+        STEP_6_MEASURE_LEFT = 6,
+        STEP_7_MEASURE_RIGHT = 7,
+        STEP_8_IS_THERE_OBSTACLE = 8,
+        STEP_9_MOVE_FORWARD = 9,
+        STEP_10_ROTATE = 10,
+        STEP_11_ROTATE_TO_TARGET = 11,
+        STEP_12_MOVE_FORWARD = 12,
+        STEP_13_CANT_MOVE = 13,
     };
-    static uint8_t stepCount = STEP_1_ROTATE_TO_ANGLE;
-    if (robot.status == ROBOT_IN_PROGRESS)
+    static uint8_t stepCount = STEP_1_IS_ROBOT_IN_TARGET;
+    static uint16_t arrRanges[NUMBER_OF_MEASUREMENTS_ALL];
+    
+    switch(stepCount)
     {
-        switch(stepCount)
+        case STEP_1_IS_ROBOT_IN_TARGET:
         {
-            case STEP_1_ROTATE_TO_ANGLE:
+            if( is_robot_in_target() )
             {
-                int16_t dx = target.x - robot.x;
-                int16_t dy = target.y - robot.y;
-                turn_around_to( calculate_angle(dx, dy) );
+                robot.status = ROBOT_FINISHED;
+            }
+            else
+            {
                 stepCount++;
-                break;
+                robot.status = ROBOT_IN_PROGRESS;
             }
-            case STEP_2_MOVE_FORWARD:   // остановится, если обнаружит препятствие или достигнет цели
-            {
-                int16_t dx = target.x - robot.x;
-                int16_t dy = target.y - robot.y;
-                move_forward( calculate_distance(dx, dy) );
+            break;
+        }
+        case STEP_2_MEASURE_LEFT:
+        {
+            measure_left(arrRanges);
+            stepCount++;
+            break;
+        }
+        case STEP_3_MEASURE_RIGHT:
+        {
+            measure_right(arrRanges);
+            stepCount++;
+            break;
+        }
+        case STEP_4_IS_THERE_OBSTACLE:
+        {
+            if ( is_there_obstacle(arrRanges) )
                 stepCount++;
-                break;
-            }
-            case STEP_3_MEASURE_LEFT_BORDER:
-            {
-                measure_left_border();  // измеренные значения сохраняются в intermediatePoint_1
+            else
+                stepCount = STEP_9_MOVE_FORWARD;
+            break;
+        }
+        case STEP_5_ROTATE:
+        {
+            turn_around_by(-90);
+            stepCount++;
+            break;
+        }
+        case STEP_6_MEASURE_LEFT:
+        {
+            measure_left(arrRanges);
+            stepCount++;
+            break;
+        }
+        case STEP_7_MEASURE_RIGHT:
+        {
+            measure_right(arrRanges);
+            stepCount++;
+            break;
+        }
+        case STEP_8_IS_THERE_OBSTACLE:
+        {
+            if ( is_there_obstacle(arrRanges) )
                 stepCount++;
-                break;
-            }
-            case STEP_4_ROTATE_TO_ANGLE:
-            {
-                int16_t dx = target.x - robot.x;
-                int16_t dy = target.y - robot.y;
-                turn_around_to( calculate_angle(dx, dy) );
-                stepCount++;
-                break;
-            }
-            case STEP_5_MEASURE_RIGTH_BORDER:
-            {
-                measure_left_border();  // измеренные значения сохраняются в intermediatePoint_2
-                stepCount++;
-                break;
-            }
-            case STEP_6_CALCULATE_INTERMEDIATE_POINTS:
-            {
-                measure_left_border();
-                stepCount++;
-                break;
-            }
-            default:
-            {
-                break;
-            }
+            else
+                stepCount = STEP_9_MOVE_FORWARD;
+            break;
+        }
+        case STEP_9_MOVE_FORWARD:
+        {
+            move_forward(RADUIS_OF_MOVEMENT);
+            stepCount++;
+            break;
+        }
+        case STEP_10_ROTATE:
+        {
+            turn_around_by(-90);
+            stepCount = STEP_2_MEASURE_LEFT;
+            break;
+        }
+        case STEP_11_ROTATE_TO_TARGET:
+        {
+            turn_around_to(calculate_angle(target.x - robot.x, target.y - robot.y));
+            stepCount++;
+            break;
+        }
+        case STEP_12_MOVE_FORWARD:
+        {
+            move_forward(RADUIS_OF_MOVEMENT);
+            stepCount = STEP_1_IS_ROBOT_IN_TARGET;
+            break;
+        }
+        case STEP_13_CANT_MOVE:
+        {
+            robot.status = ROBOT_CANT_MOVE;
+            break;
+        }
+        default:
+        {
+            break;
         }
     }
-    else if (robot.status == ROBOT_INITIALIZED)
-    {
-        stepCount = 0;
-    }
-    else if (robot.status == ROBOT_FINISHED)
-    {
-        
-    }
-    return 0;   // change
 }
-*/
+
 /* 
  * @brief Передача по uart информацию о роботе (первые 10 байт структуры robot)
  */
@@ -473,6 +521,7 @@ void log_transmit()
 {
     uint8_t arrOfData[10];
     memcpy(arrOfData, &robot, 10);
+    UART_transmit(debug, "log: ", 5);
     UART_transmit(debug, arrOfData, 10);
     UART_transmit(debug, "\n\r", 2);
 }

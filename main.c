@@ -58,16 +58,15 @@ int main(void)
         //test_uart();              // успешно работает
         //test_software_timer();    // успешно работает
         //test_rangefinder();       // успешно работает
-        test_encoder();           // ?
-        
+        test_encoder();             // успешно работает
         //if(move_with_obstacle_avoidance_do() != FINISHED)
-        /*
+        
         if(timer_report(&logPeriod) != TIMER_WORKING)
         {
             timer_start_ms(&logPeriod, 500);
             log_transmit();
         }
-        */
+        
     }
     return 0;
 }

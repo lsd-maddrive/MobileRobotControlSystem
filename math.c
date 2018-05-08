@@ -50,7 +50,7 @@ double atan(float number)
 * @param a - угол в градусах
 * @return sin
 */
-float sin(int a)
+float sin(int16_t  a)
 {
     float x = a*DEGREE_TO_RAD;
     float buf = x*x*x*0.166667;
@@ -71,7 +71,7 @@ float sin(int a)
 * @param a - угол в градусах
 * @return cos
 */
-float cos(int a)
+float cos(int16_t  a)
 {
     float x = a*DEGREE_TO_RAD;
     float buf = x*x*0.5;
@@ -88,3 +88,15 @@ float cos(int a)
     
     return answer;
 }
+
+/*
+* @brief Модуль числа
+* @param num - число
+* @return модуль числа
+*/
+/*
+uint16_t abso(int16_t num)
+{
+    return (num > 0)?num:-num;
+}
+*/
