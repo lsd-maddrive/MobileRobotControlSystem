@@ -35,8 +35,8 @@
 
 enum Initial_data
 {
-    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости см/сек
-    ROBOT_START_MAX_SPEED = 60,     // Исходное значение максимальной скорости см/сек
+    ROBOT_START_MIN_SPEED = 25,     // Исходное значение минимальной скорости см/сек
+    ROBOT_START_MAX_SPEED = 50,     // Исходное значение максимальной скорости см/сек
     ROBOT_START_ACCELERATION = 10,  // Исходное значение ускорения см/сек^2
     ROBOT_START_DECELERATION = 10,  // Исходное значение замедления см/сек^2
 };
@@ -254,15 +254,69 @@ void turn_around_by(int16_t angle)
     {
         motor_set_power(-robot.minSpeed, MOTOR_LEFT);
         motor_set_power(robot.minSpeed,  MOTOR_RIGHT);
+        robot.currentSpeed = robot.minSpeed;
         needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*angle/360; 
-        while((-1)*encoder_right_get_pulses() < needPulses);
+        while((-1)*encoder_right_get_pulses() < (needPulses >> 1) )
+        {
+            if( timer_report(&timerSub) != TIMER_WORKING )
+            {
+                timer_start_ms(&timerSub, 100);
+                if (robot.currentSpeed < robot.maxSpeed)
+                {
+                    robot.currentSpeed += (robot.acceleration >> 3);
+                    motor_set_power(-robot.currentSpeed, MOTOR_LEFT);
+                    motor_set_power(robot.currentSpeed,  MOTOR_RIGHT);
+                }
+            }
+            
+        }
+        while((-1)*encoder_right_get_pulses() < needPulses )
+        {
+            if( timer_report(&timerSub) != TIMER_WORKING )
+            {
+                timer_start_ms(&timerSub, 100);
+                if (robot.currentSpeed > robot.minSpeed)
+                {
+                    robot.currentSpeed -= (robot.deceleration >> 3);
+                    motor_set_power(-robot.currentSpeed, MOTOR_LEFT);
+                    motor_set_power(robot.currentSpeed,  MOTOR_RIGHT);
+                }
+            }
+        }
     }
     else if ( angle < 0) // поворот против часовой
     {
         motor_set_power(robot.minSpeed,  MOTOR_LEFT);
         motor_set_power(-robot.minSpeed, MOTOR_RIGHT);
+        robot.currentSpeed = robot.minSpeed;
         needPulses = (int32_t)PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION*(-angle)/360;      
-        while((-1)*encoder_left_get_pulses() < needPulses);
+        while((-1)*encoder_left_get_pulses() < (needPulses >> 1) )
+        {
+            if( timer_report(&timerSub) != TIMER_WORKING )
+            {
+                timer_start_ms(&timerSub, 100);
+                if (robot.currentSpeed < robot.maxSpeed)
+                {
+                    robot.currentSpeed += (robot.acceleration >> 3);
+                    motor_set_power(robot.currentSpeed, MOTOR_LEFT);
+                    motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
+                }
+            }
+            
+        }
+        while((-1)*encoder_left_get_pulses() < needPulses)
+        {
+            if( timer_report(&timerSub) != TIMER_WORKING )
+            {
+                timer_start_ms(&timerSub, 100);
+                if (robot.currentSpeed > robot.minSpeed)
+                {
+                    robot.currentSpeed -= (robot.deceleration >> 3);
+                    motor_set_power(robot.currentSpeed, MOTOR_LEFT);
+                    motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
+                }
+            }
+        }
     }
     else
     {
