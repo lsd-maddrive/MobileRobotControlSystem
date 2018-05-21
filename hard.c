@@ -45,10 +45,10 @@ void PWM_init()
     PWM1CON1bits.PEN1L = 1;     // PWM1L (PE0) pin is enabled for PWM output
     PWM1CON1bits.PMOD2 = 1;     // PWM2 PAIR MODE: Independent Output mode
     PWM1CON1bits.PEN2L = 1;     // PWM2L (PE2) pin is enabled for PWM output
-    PWM1CON1bits.PMOD1 = 1;     // PWM3 PAIR MODE: Independent Output mode
-    PWM1CON1bits.PEN1L = 1;     // PWM3L (PE4) pin is enabled for PWM output
-    PWM1CON1bits.PMOD2 = 1;     // PWM4 PAIR MODE: Independent Output mode
-    PWM1CON1bits.PEN2L = 1;     // PWM4L (PE6) pin is enabled for PWM output
+    PWM1CON1bits.PMOD3 = 1;     // PWM3 PAIR MODE: Independent Output mode
+    PWM1CON1bits.PEN3L = 1;     // PWM3L (PE4) pin is enabled for PWM output
+    PWM1CON1bits.PMOD4 = 1;     // PWM4 PAIR MODE: Independent Output mode
+    PWM1CON1bits.PEN4L = 1;     // PWM4L (PE6) pin is enabled for PWM output
     
     P1TPERbits.PTPER = PWM_PERIOD;//PWM Time Base Period Value bits (max 32676)
         
