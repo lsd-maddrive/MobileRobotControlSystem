@@ -249,7 +249,7 @@ uint8_t is_robot_in_target()
 void turn_around_by(int16_t angle)
 {
     int32_t needPulses;
-    encoders_reset_angle();
+    encoders_reset_pulses();
     if ( angle <= 0) // поворот против часовой
     {
         motor_set_power(-robot.minSpeed, MOTOR_LEFT);
@@ -359,7 +359,7 @@ void move_forward(uint16_t distance)
     
     // Инициализация переменных исходными значениями:
     const int16_t needPulses = PULSES_IN_CM*distance;
-    encoders_reset_angle();
+    encoders_reset_pulses();
     int16_t nowPulses = 0;
     uint8_t speedChange = 0;
     robot.range = 0;

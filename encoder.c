@@ -2,10 +2,13 @@
  * File:   main.c
  */
 #include "encoder.h"
-#include "uart.h"
 
 /* Принцип работы энкодера:
- * У энкодеров по 4 ножки:
+  * Если энкодер поворачивается, на ножках генерируются импульсы, 
+ * Нужно внешнее прерывание на изменение уровня одной из ножек.
+ * Во время прерывания проверяем состояние второй ноги.
+ *
+ * Подключение энкодеров:
  * - PIN_x_1 (оранжевый)
  * - PIN_x_2 (зеленый)
  * - GND (желтый)
@@ -16,15 +19,11 @@
  * Right encoder:
  * PIN_1 = RF8 = AN20 = INT1
  * PIN_1 = RF9 = AN21 
- * Если энкодер поворачивается, на ножках генерируются импульсы, 
- * Нужно внешнее прерывание на изменение уровня одной из ножек.
- * Во время прерывания проверяем состояние второй ноги.
  */
+
 
 volatile int16_t pulsesLeft;
 volatile int16_t pulsesRight;
-extern UART_module* debug;
-
 
 /*
 * @brief Инициализация энкодера
@@ -35,6 +34,7 @@ void encoders_init()
     pulsesRight = 0;
     encoders_interrupt_init();
 }
+
 
 /*
 * @brief Прерывание от левого энкодера (INT0)
@@ -60,6 +60,7 @@ void __attribute__((interrupt, no_auto_psv)) _INT0Interrupt(void)
     encoder_left_reset_interrupt_flag();
 }
 
+
 /*
 * @brief Прерывание от правого энкодера (INT1)
 */
@@ -84,6 +85,7 @@ void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void)
     encoder_right_reset_interrupt_flag();
 }
 
+
 /*
 * @brief Получить значение угла поворота левого энкодера
 * @return значение угла поворота левого энкодера
@@ -92,6 +94,7 @@ int16_t encoder_left_get_pulses()
 {
     return pulsesLeft;
 }
+
 
 /*
 * @brief Получить значение угла поворота правого энкодера
@@ -102,10 +105,11 @@ int16_t encoder_right_get_pulses()
     return pulsesRight;
 }
 
+
 /*
 * @brief Обнулить кол-во импульсов энкодеров
 */
-void encoders_reset_angle()
+void encoders_reset_pulses()
 {
     pulsesLeft = 0;
     pulsesRight = 0;
