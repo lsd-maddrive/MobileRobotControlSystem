@@ -17,7 +17,10 @@ void num2str(int32_t num, char* str)
     uint8_t count = 0;
     char buf;
     if (num < 0)
+    {
         num = -num;
+        *str++ = '-';
+    }
     while(1)
     {
         if (num == 0)
