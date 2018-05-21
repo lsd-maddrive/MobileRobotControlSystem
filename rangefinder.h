@@ -6,7 +6,6 @@
 #define	RANGEFINDER_H
 
 #include "hard.h"
-#include "timer.h"
 
 void rangefinder_init();            // Инициализация датчика
 void rangefinder_give_impulse();    // Подать импульс на датчик

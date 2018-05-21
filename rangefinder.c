@@ -2,15 +2,25 @@
  * File:   rangefinder.c
  */
 
-/*Ультразвуковой дальномер SRF-05
- * - вход датчика - подаем импульс длительностью 10 мкс
- * - выход датчика - расстояние до препятствия
+/* Подключение ультразвукового дальномера SRF-05:
+ * Ножка датчика                Подключение к dsPIC  
+ * ECHO - output                RA15 (INT4) - input
+ * TRIG - input                 RD8 (IC1) - output
+ * GND                          GND
+ * VCC                          5 V (but dsPIC only 3.3V)
+ *
+ * Принцип работы ультразвукового дальномера SRF-05
+ * - на ножку TRIG датчика подаем импульс длительностью 10 мкс;
+ * - с ножки ECHO датчика считываем импульс, длительность которого 
+ * пропорциональна расстоянию до препятствия.
  */
 
 #include "rangefinder.h"
+#include "timer.h"
 
 static uint32_t range;
 static Timer timerForPulse; 
+
 
 /*
 * @brief Инициализация ултьтразвукового дальномера
@@ -22,8 +32,9 @@ void rangefinder_init()
     range = 0;
 }
 
+
 /*
-* @brief Подать импульс на датчик
+* @brief Подать импульс на датчик длительностью минимум 10 мс
 */
 void rangefinder_give_impulse()
 {
@@ -39,6 +50,7 @@ void rangefinder_give_impulse()
     RANGEFINDER_OUTPUT = 0;
 }
 
+
 /*
 * @brief Получить измеренное расстояние (в мм)
 */
@@ -46,6 +58,7 @@ uint16_t rangefinder_get_range()
 {
     return (float)range*0.085 + 14.3;
 }      
+
 
 /*
 * @brief Прерывание от дальномера (INT4)
