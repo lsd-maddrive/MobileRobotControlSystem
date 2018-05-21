@@ -68,16 +68,16 @@ void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void)
     if ( (ENCODER_RIGHT_TYPE_OF_INTERRUPT) == ENCODER_POSITIVE_EDGE)
     {
         if (ENCODER_RIGHT_PIN2 == 1)
-            pulsesRight++;
-        else
             pulsesRight--;
+        else
+            pulsesRight++;
     }
     else
     {
         if (ENCODER_RIGHT_PIN2 == 1)
-            pulsesRight--;
-        else
             pulsesRight++;
+        else
+            pulsesRight--;
     }
     
     encoder_right_change_type_of_interrupt();
