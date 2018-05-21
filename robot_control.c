@@ -35,8 +35,8 @@
 
 enum Initial_data
 {
-    ROBOT_START_MIN_SPEED = 10,     // Исходное значение минимальной скорости см/сек
-    ROBOT_START_MAX_SPEED = 10,     // Исходное значение максимальной скорости см/сек
+    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости см/сек
+    ROBOT_START_MAX_SPEED = 60,     // Исходное значение максимальной скорости см/сек
     ROBOT_START_ACCELERATION = 10,  // Исходное значение ускорения см/сек^2
     ROBOT_START_DECELERATION = 10,  // Исходное значение замедления см/сек^2
 };
@@ -49,8 +49,8 @@ enum Calibration
     ROBOT_HALF_WIDTH = ROBOT_WIDTH >> 1,
     ROBOT_HALF_LENGTH = ROBOT_LENGTH >> 1,
     // Характеристики энкодера:
-    PULSES_IN_REVOLUTION_OF_ROTOR = 100,
-    PULSES_IN_360_DEGREE = 2,
+    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 710,
+    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 675,
     PULSES_IN_CM = 6, // в теории (если коэф. сцепления = 1) = 5.79
     // Характеристики дальномера:
     RANGEFINDER_ANGLE = 15,
@@ -248,25 +248,26 @@ uint8_t is_robot_in_target()
  */
 void turn_around_by(int16_t angle)
 {
-    uint16_t needPulses;
+    int32_t needPulses;
     encoders_reset_angle();
     if ( angle > 0) // поворот по часовой
     {
-        motor_set_power(robot.minSpeed,  MOTOR_LEFT);
-        motor_set_power(-robot.minSpeed, MOTOR_RIGHT);
-        needPulses = PULSES_IN_360_DEGREE*angle/360;  
+        motor_set_power(-robot.minSpeed, MOTOR_LEFT);
+        motor_set_power(robot.minSpeed,  MOTOR_RIGHT);
+        needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*angle/360; 
+        while((-1)*encoder_right_get_pulses() < needPulses);
     }
     else if ( angle < 0) // поворот против часовой
     {
-        motor_set_power(-robot.minSpeed, MOTOR_LEFT);
-        motor_set_power(robot.minSpeed,  MOTOR_RIGHT);
-        needPulses = PULSES_IN_360_DEGREE*(-1*angle)/360;
+        motor_set_power(robot.minSpeed,  MOTOR_LEFT);
+        motor_set_power(-robot.minSpeed, MOTOR_RIGHT);
+        needPulses = (int32_t)PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION*(-angle)/360;      
+        while((-1)*encoder_left_get_pulses() < needPulses);
     }
     else
     {
         return;
     }
-    while(encoder_right_get_pulses() < needPulses);
     /*to do: плавное ускорение, замедление*/
     motors_stop();
     robot.angle =+ angle;
@@ -401,26 +402,32 @@ void move_with_obstacle_avoidance_do()
 {
     enum Step
     {
-        STEP_1_IS_ROBOT_IN_TARGET = 1,
-        STEP_2_MEASURE_LEFT = 2,
-        STEP_3_MEASURE_RIGHT = 3,
-        STEP_4_IS_THERE_OBSTACLE = 4,
-        STEP_5_ROTATE = 5,
-        STEP_6_MEASURE_LEFT = 6,
-        STEP_7_MEASURE_RIGHT = 7,
-        STEP_8_IS_THERE_OBSTACLE = 8,
-        STEP_9_MOVE_FORWARD = 9,
-        STEP_10_ROTATE = 10,
-        STEP_11_ROTATE_TO_TARGET = 11,
+        STEP_1_ROTATE = 1,
+        STEP_2_IS_ROBOT_IN_TARGET = 2,
+        STEP_3_MEASURE_LEFT = 3,
+        STEP_4_MEASURE_RIGHT = 4,
+        STEP_5_IS_THERE_OBSTACLE = 5,
+        STEP_6_ROTATE = 6,
+        STEP_7_MEASURE_LEFT = 7,
+        STEP_8_MEASURE_RIGHT = 8,
+        STEP_9_IS_THERE_OBSTACLE = 9,
+        STEP_10_MOVE_FORWARD = 10,
+        STEP_11_ROTATE = 11,
         STEP_12_MOVE_FORWARD = 12,
         STEP_13_CANT_MOVE = 13,
     };
-    static uint8_t stepCount = STEP_1_IS_ROBOT_IN_TARGET;
+    static uint8_t stepCount = STEP_1_ROTATE;
     static uint16_t arrRanges[NUMBER_OF_MEASUREMENTS_ALL];
     
     switch(stepCount)
     {
-        case STEP_1_IS_ROBOT_IN_TARGET:
+        case STEP_1_ROTATE:
+        {
+            turn_around_to(calculate_angle(target.x - robot.x, target.y - robot.y));
+            stepCount++;
+            break;
+        }
+        case STEP_2_IS_ROBOT_IN_TARGET:
         {
             if( is_robot_in_target() )
             {
@@ -433,74 +440,68 @@ void move_with_obstacle_avoidance_do()
             }
             break;
         }
-        case STEP_2_MEASURE_LEFT:
+        case STEP_3_MEASURE_LEFT:
         {
             measure_left(arrRanges);
             stepCount++;
             break;
         }
-        case STEP_3_MEASURE_RIGHT:
+        case STEP_4_MEASURE_RIGHT:
         {
             measure_right(arrRanges);
             stepCount++;
             break;
         }
-        case STEP_4_IS_THERE_OBSTACLE:
+        case STEP_5_IS_THERE_OBSTACLE:
         {
             if ( is_there_obstacle(arrRanges) )
                 stepCount++;
             else
-                stepCount = STEP_9_MOVE_FORWARD;
+                stepCount = STEP_10_MOVE_FORWARD;
             break;
         }
-        case STEP_5_ROTATE:
+        case STEP_6_ROTATE:
         {
             turn_around_by(-90);
             stepCount++;
             break;
         }
-        case STEP_6_MEASURE_LEFT:
+        case STEP_7_MEASURE_LEFT:
         {
             measure_left(arrRanges);
             stepCount++;
             break;
         }
-        case STEP_7_MEASURE_RIGHT:
+        case STEP_8_MEASURE_RIGHT:
         {
             measure_right(arrRanges);
             stepCount++;
             break;
         }
-        case STEP_8_IS_THERE_OBSTACLE:
+        case STEP_9_IS_THERE_OBSTACLE:
         {
             if ( is_there_obstacle(arrRanges) )
                 stepCount++;
             else
-                stepCount = STEP_9_MOVE_FORWARD;
+                stepCount = STEP_10_MOVE_FORWARD;
             break;
         }
-        case STEP_9_MOVE_FORWARD:
+        case STEP_10_MOVE_FORWARD:
         {
             move_forward(RADUIS_OF_MOVEMENT);
             stepCount++;
             break;
         }
-        case STEP_10_ROTATE:
+        case STEP_11_ROTATE:
         {
             turn_around_by(-90);
-            stepCount = STEP_2_MEASURE_LEFT;
-            break;
-        }
-        case STEP_11_ROTATE_TO_TARGET:
-        {
-            turn_around_to(calculate_angle(target.x - robot.x, target.y - robot.y));
-            stepCount++;
+            stepCount = STEP_3_MEASURE_LEFT;
             break;
         }
         case STEP_12_MOVE_FORWARD:
         {
             move_forward(RADUIS_OF_MOVEMENT);
-            stepCount = STEP_1_IS_ROBOT_IN_TARGET;
+            stepCount = STEP_2_IS_ROBOT_IN_TARGET;
             break;
         }
         case STEP_13_CANT_MOVE:

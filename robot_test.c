@@ -93,29 +93,25 @@ void test_encoder()
     int32_t pulsesRight;
     uint8_t count;
     
-    motor_set_power(10, MOTOR_LEFT);
-    motor_set_power(10, MOTOR_RIGHT);
+    motor_set_power(-15, MOTOR_LEFT);
+    motor_set_power(-15, MOTOR_RIGHT);
     for (count = 0; count < 10; count++)
     {
-        char buffer[3] = {0, 0, 0};
-        pulsesLeft = encoder_left_get_pulses();
-        pulsesRight = encoder_right_get_pulses();
-        
-        UART_transmit(debug, "left:  ", 7);
-        num2str(pulsesLeft, buffer);
-        UART_transmit(debug, buffer, 3);
-        UART_transmit(debug, "\n\r", 2);
-        
-        uint8_t countErase;
-        for (countErase = 0; countErase < 3; countErase++)
-            buffer[countErase] = 0;
-  
-        UART_transmit(debug, "right: ", 7);
-        num2str(pulsesRight, buffer);
-        UART_transmit(debug, buffer, 3);
-        UART_transmit(debug, "\n\r", 2);
-        
         timer_start_ms(&timer, 1000);
+        char buffer[3] = {0, 0, 0};
+        
+        UART_write_string(debug, "left:  ");
+        pulsesLeft = encoder_left_get_pulses();
+        num2str(pulsesLeft, buffer);
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, "\n");
+
+        UART_write_string(debug, "right: ");
+        pulsesRight = encoder_right_get_pulses();
+        num2str(pulsesRight, buffer);
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, "\n\r");
+        
         while(timer_report(&timer) == TIMER_WORKING);
     }
     motors_stop();
@@ -144,6 +140,10 @@ void test_rangefinder()
 void test_turn_around_by()
 {
     turn_around_by(360);
+    timer_start_ms(&timer, 5000);
+    while(timer_report(&timer) == TIMER_WORKING);
+    
+    turn_around_by(-360);
     timer_start_ms(&timer, 5000);
     while(timer_report(&timer) == TIMER_WORKING);
 }
