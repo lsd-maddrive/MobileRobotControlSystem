@@ -49,9 +49,9 @@ enum Calibration
     ROBOT_HALF_WIDTH = ROBOT_WIDTH >> 1,
     ROBOT_HALF_LENGTH = ROBOT_LENGTH >> 1,
     // Характеристики энкодера:
-    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 710,
-    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 675,
-    PULSES_IN_CM = 6, // в теории (если коэф. сцепления = 1) = 5.79
+    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 675,
+    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 710,
+    PULSES_IN_CM = 5, // в теории (если коэф. сцепления = 1) = 5.79
     // Характеристики дальномера:
     RANGEFINDER_ANGLE = 15,
     RANGEFINDER_HALF_ANGLE = 7,
@@ -250,13 +250,13 @@ void turn_around_by(int16_t angle)
 {
     int32_t needPulses;
     encoders_reset_angle();
-    if ( angle > 0) // поворот по часовой
+    if ( angle <= 0) // поворот против часовой
     {
         motor_set_power(-robot.minSpeed, MOTOR_LEFT);
         motor_set_power(robot.minSpeed,  MOTOR_RIGHT);
         robot.currentSpeed = robot.minSpeed;
-        needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*angle/360; 
-        while((-1)*encoder_right_get_pulses() < (needPulses >> 1) )
+        needPulses = (int32_t)PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION*angle/360; 
+        while((-1)*encoder_right_get_pulses() > (needPulses >> 1) )
         {
             if( timer_report(&timerSub) != TIMER_WORKING )
             {
@@ -267,10 +267,9 @@ void turn_around_by(int16_t angle)
                     motor_set_power(-robot.currentSpeed, MOTOR_LEFT);
                     motor_set_power(robot.currentSpeed,  MOTOR_RIGHT);
                 }
-            }
-            
+            } 
         }
-        while((-1)*encoder_right_get_pulses() < needPulses )
+        while((-1)*encoder_right_get_pulses() > needPulses )
         {
             if( timer_report(&timerSub) != TIMER_WORKING )
             {
@@ -284,13 +283,13 @@ void turn_around_by(int16_t angle)
             }
         }
     }
-    else if ( angle < 0) // поворот против часовой
+    else if ( angle > 0) // поворот по часовой
     {
         motor_set_power(robot.minSpeed,  MOTOR_LEFT);
         motor_set_power(-robot.minSpeed, MOTOR_RIGHT);
         robot.currentSpeed = robot.minSpeed;
-        needPulses = (int32_t)PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION*(-angle)/360;      
-        while((-1)*encoder_left_get_pulses() < (needPulses >> 1) )
+        needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*(-angle)/360;      
+        while((-1)*encoder_left_get_pulses() > (needPulses >> 1) )
         {
             if( timer_report(&timerSub) != TIMER_WORKING )
             {
@@ -302,9 +301,8 @@ void turn_around_by(int16_t angle)
                     motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
                 }
             }
-            
         }
-        while((-1)*encoder_left_get_pulses() < needPulses)
+        while((-1)*encoder_left_get_pulses() > needPulses)
         {
             if( timer_report(&timerSub) != TIMER_WORKING )
             {
@@ -322,7 +320,6 @@ void turn_around_by(int16_t angle)
     {
         return;
     }
-    /*to do: плавное ускорение, замедление*/
     motors_stop();
     robot.angle =+ angle;
 }
@@ -358,11 +355,12 @@ void move_forward(uint16_t distance)
 {
     // Константы, полученные эмпирическим путем:
     const uint8_t PULSES_HYSTERESIS = 2;
-    const float PROPORTIONAL_REGULATOR = 0.2;
+    const float PROPORTIONAL_REGULATOR = 1;
     
     // Инициализация переменных исходными значениями:
-    const uint16_t needPulses = PULSES_IN_CM*distance;
-    uint16_t nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
+    const int16_t needPulses = PULSES_IN_CM*distance;
+    encoders_reset_angle();
+    int16_t nowPulses = 0;
     uint8_t speedChange = 0;
     robot.range = 0;
     
@@ -379,33 +377,35 @@ void move_forward(uint16_t distance)
         // 2. Активная проверка на наличие препятствия (робот остановливается):
         if (robot.range < OBSTACLE_DANGEROUS_DISTANCE)
         {
+            /*
             motors_stop();
             if (getMedianRange() < OBSTACLE_DANGEROUS_DISTANCE)
             {
                 distance = nowPulses/PULSES_IN_CM;
                 break;
             }
+            */
         }
-        // 3. Сохранение прямолинейности движения:
+        // 3. Сохранение прямолинейности движения с помощью П-регулятора:
         if( (encoder_left_get_pulses() > (encoder_right_get_pulses() + PULSES_HYSTERESIS) ) ||
             ( encoder_right_get_pulses() > (encoder_left_get_pulses() + PULSES_HYSTERESIS) ) )
         {
             speedChange = ( encoder_left_get_pulses() - encoder_right_get_pulses() )*PROPORTIONAL_REGULATOR;
-            motor_set_power(robot.minSpeed + speedChange,  MOTOR_LEFT);
-            motor_set_power(robot.minSpeed - speedChange, MOTOR_RIGHT);
+            motor_set_power(robot.minSpeed - speedChange,  MOTOR_LEFT);
+            motor_set_power(robot.minSpeed + speedChange, MOTOR_RIGHT);
         }
         else
         {
-            motor_set_power(robot.minSpeed + speedChange,  MOTOR_LEFT);
-            motor_set_power(robot.minSpeed - speedChange, MOTOR_RIGHT);
+            motor_set_power(robot.minSpeed - speedChange,  MOTOR_LEFT);
+            motor_set_power(robot.minSpeed + speedChange, MOTOR_RIGHT);
         }
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
         
         /* to do: 4. Плавное изменение скорости двигателей*/
     }
     motors_stop();
-    robot.x = sin(robot.angle)*distance;
-    robot.y = cos(robot.angle)*distance;
+    robot.x += sin(robot.angle)*distance;
+    robot.y += cos(robot.angle)*distance;
 }
 
 /* 
@@ -414,14 +414,18 @@ void move_forward(uint16_t distance)
  */
 void move_to(int16_t x, int16_t y)
 {
-    int16_t dx = (robot.x - x);
-    int16_t dy = (robot.y - y);
-    uint16_t distance = calculate_distance(dx, dy);
-    int16_t angle = calculate_angle(dx, dy);
-    turn_around_by(angle);
-    move_forward(distance);
-    robot.x =+ x; 
-    robot.y =+ y; 
+    target.x = x;
+    target.y = y;
+    if(is_robot_in_target() != 1)
+    {
+        int16_t dx = (robot.x - x);
+        int16_t dy = (robot.y - y);
+        uint16_t distance = calculate_distance(dx, dy);
+        int16_t angle = calculate_angle(dx, dy);
+        turn_around_by(angle);
+        move_forward(distance);
+    }
+     
 }
 
 /* 
@@ -581,30 +585,30 @@ void log_transmit()
     //UART_transmit(debug, "\n\r", 2);
     
     char buf[12];
-    UART_transmit(debug, "log:\n\r", 6);
+    UART_write_string(debug, "\nlog:");
     
-    num2str(robot.status, buf);
-    UART_write_string(debug, "\r\nstatus: ");
-    UART_write_string(debug, buf);
+    //num2str(robot.status, buf);
+    //UART_write_string(debug, "\r\nstatus: ");
+    //UART_write_string(debug, buf);
     
     num2str(robot.x, buf);
-    UART_write_string(debug, "\r\nrobot.x: ");
+    UART_write_string(debug, "\nrobot.x: ");
     UART_write_string(debug, buf);
     
     num2str(robot.y, buf);
-    UART_write_string(debug, "\r\nrobot.y: ");
+    UART_write_string(debug, "\nrobot.y: ");
     UART_write_string(debug, buf);
     
-    num2str(target.x, buf);
-    UART_write_string(debug, "\r\ntarget.x: ");
-    UART_write_string(debug, buf);
+    //num2str(target.x, buf);
+    //UART_write_string(debug, "\r\ntarget.x: ");
+    //UART_write_string(debug, buf);
     
-    num2str(target.y, buf);
-    UART_write_string(debug, "\r\ntarget.y: ");
-    UART_write_string(debug, buf);
+    //num2str(target.y, buf);
+    //UART_write_string(debug, "\r\ntarget.y: ");
+    //UART_write_string(debug, buf);
     
     num2str(robot.angle, buf);
-    UART_write_string(debug, "\r\nrobot.angle: ");
+    UART_write_string(debug, "\nrobot.angle: ");
     UART_write_string(debug, buf);
     
     UART_write_string(debug, "\r\n");

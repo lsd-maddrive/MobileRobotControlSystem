@@ -39,6 +39,7 @@ typedef struct
 
 void turn_around_to(int16_t angle);     // Поворот на указанный угол
 void move_to(int16_t x, int16_t y);     // Движение к указанной координате
+void move_forward(uint16_t distance);   // Движение вперед на указанное расстояние
 
 void init_periphery();                  // Инициализация всей переферии
 

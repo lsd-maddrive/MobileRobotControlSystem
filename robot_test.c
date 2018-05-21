@@ -93,8 +93,8 @@ void test_encoder()
     int32_t pulsesRight;
     uint8_t count;
     
-    motor_set_power(-15, MOTOR_LEFT);
-    motor_set_power(-15, MOTOR_RIGHT);
+    motor_set_power(15, MOTOR_LEFT);
+    motor_set_power(15, MOTOR_RIGHT);
     for (count = 0; count < 10; count++)
     {
         timer_start_ms(&timer, 1000);
@@ -131,7 +131,7 @@ void test_rangefinder()
     num2str(range, buffer); 
     UART_write_string(debug, "\nrange = ");
     UART_write_string(debug, buffer);
-    UART_write_string(debug, "\n\r\n\r");
+    UART_write_string(debug, " mm\n\r\n\r");
     
     timer_start_ms(&timer, 500);
     while(timer_report(&timer) == TIMER_WORKING);
