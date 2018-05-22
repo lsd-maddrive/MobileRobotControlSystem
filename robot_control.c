@@ -35,10 +35,10 @@
 
 enum Initial_data
 {
-    ROBOT_START_MIN_SPEED = 25,     // Исходное значение минимальной скорости см/сек
+    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости см/сек
     ROBOT_START_MAX_SPEED = 50,     // Исходное значение максимальной скорости см/сек
-    ROBOT_START_ACCELERATION = 10,  // Исходное значение ускорения см/сек^2
-    ROBOT_START_DECELERATION = 10,  // Исходное значение замедления см/сек^2
+    ROBOT_START_ACCELERATION = 8,  // Исходное значение ускорения см/сек^2
+    ROBOT_START_DECELERATION = 8,  // Исходное значение замедления см/сек^2
 };
 
 enum Calibration
@@ -51,7 +51,7 @@ enum Calibration
     // Характеристики энкодера:
     PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 675,
     PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 710,
-    PULSES_IN_CM = 5, // в теории (если коэф. сцепления = 1) = 5.79
+    PULSES_IN_CM = 9, // в теории (если коэф. сцепления = 1) = 5.79, на практике хорошо будет 8.5
     // Характеристики дальномера:
     RANGEFINDER_ANGLE = 15,
     RANGEFINDER_HALF_ANGLE = 7,
@@ -83,6 +83,8 @@ typedef struct
 extern UART_module* debug;
 Timer timer; 
 Timer timerSub;
+static Timer timerForSmoothChangeSpeedDelay;
+static Timer timerForSmoothChangeSpeedDeadZone;
 Robot_data robot =
 {
     .status = ROBOT_INITIALIZED,
@@ -103,15 +105,45 @@ static Target_point target =
 
 /****************************** PRIVATE FUNCTION ******************************/
 /* 
- * @brief Расчет угла по длинам двух катетов
+ * @brief Расчет угла поворота по длинам двух катетов
+ * @param dx - катет по горизонтали
+ * @param dy - катет по вертикали
+ * @return angle - угол в диапазоне (-180; 180] градусов
  */
 int16_t calculate_angle(int16_t dx, int16_t dy)
 {
-    int16_t angle = atan( (float)dx/dy );
-    if (dx >= 0 && dy <= 0) // 4-ый квадрант
-        angle =+ 180;
-    else if (dx <= 0 && dy <= 0) // 3-ий квадрант
-        angle =- 180;
+    // Избегаем деления на ноль:
+    if (dy == 0)
+    {
+        if (dx > 0)
+        {
+            return 90;
+        }
+        else if (dx == 0)
+        {
+            return 0;
+        }
+        return -90;
+    }
+    if (dx == 0)
+    {
+        if (dy > 0)
+        {
+            return 0;
+        }
+        return 180;
+    }
+    // Основной расчет:
+    int16_t angle = atan( abs_double((float)dx/dy) );
+    if (dx > 0 && dy < 0)       // 4-ый квадрант
+        angle = 180 - angle;
+    else if (dx < 0 && dy < 0)  // 3-ий квадрант
+        angle -= 180;
+    else if (dx < 0 && dy > 0)  // 2-ой квадрант
+        angle = -angle;
+    else                        // 1-ый квадрант
+        angle = angle;
+
     return angle;
 }
 
@@ -222,98 +254,168 @@ uint8_t is_robot_in_target()
 {
     enum
     {
-        ALLOWABLE_FAULT = 50, // 5 см
+        ALLOWABLE_FAULT = 5, // 5 см
     };
-    uint16_t dx, dy;
-    /*to do: abs()*/
-    dx = robot.x - target.x;
-    if (dx < 0)
-        dx = -dx;
-    /*to do: abs()*/
-    dy = robot.y - target.y;
-    if (dy< 0)
-        dy = -dy;
+    int16_t dx, dy;
+    dx = abs_16( target.x - robot.x );
+    dy = abs_16( target.y - robot.y );
     
     if(dx <= ALLOWABLE_FAULT && dy <= ALLOWABLE_FAULT)
         return 1;
+    return 0;  
+}
+
+
+/* 
+ * @brief Плавное увеличение значения текущей скорости робота
+ * @return 1, если максимальная скорость достигнута, иначе 0
+ */
+uint8_t smooth_increase_current_speed()
+{
+    if (robot.currentSpeed < robot.maxSpeed)
+    {
+        if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
+        {
+            timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
+            robot.currentSpeed += (robot.acceleration >> 3);
+        }
+    }
+    else
+    {
+        return 1;
+    }
     return 0;
-        
+}
+
+
+/* 
+ * @brief Плавное уменьшение значения текущей скорости робота
+ */
+void smooth_decrease_current_speed()
+{
+    UART_write_string(debug, "dec\n\r");
+    if (robot.currentSpeed > robot.minSpeed)
+    {
+        if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
+        {
+            timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
+            robot.currentSpeed -= (robot.deceleration >> 3);
+        }
+    }
+}
+
+
+/* 
+ * @brief Плавное изменение значения текущей скорости робота
+ * Процесс изменения скорости робота делится на 4 этапа:
+ * 1. ROBOT_ACCELERATION_PROCESS
+ * Происходит увеличение скорости робота с значения robot.speedMin до robot.speedMax.
+ * Этот процесс заканчивается двумя способами:
+ * - если робот достигает максимальной скорости => устанавливается статус ROBOT_ACCELERATION_STOP;
+ * - если кол-во импульсов переваливает значение половины необходимых.
+ * 2. ROBOT_ACCELERATION_STOP
+ * На этом этапе скорость робота не меняется и остается максимальной.
+ * Этот процесс заканчивается, если кол-во импульсов переваливает значение половины необходимых.
+ * 3. ROBOT_DECELERATION_STOP
+  * На этом этапе скорость робота не меняется и остается максимальной.
+ * Этот процесс длится ровно столько же, сколько длился 2-ой этап.
+ * 4. ROBOT_DECELERATION_PROCESS
+ * Происходит уменьшение скорости робота до значения robot.speedMin.
+ * Процесс заканчивается, когда кол-во импульсов достигает необходимого.
+ */
+void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
+{
+    enum
+    {
+        ROBOT_ACCELERATION_PROCESS = 0,
+        ROBOT_ACCELERATION_STOP = 1,
+        ROBOT_DECELERATION_STOP = 2,
+        ROBOT_DECELERATION_PROCESS = 3,
+    };
+    static uint8_t statusOfChange = ROBOT_ACCELERATION_PROCESS;
+    
+    // Ускорение - первые 2 этапа:
+    if(nowPulses < (needPulses >> 1) )
+    {
+        if( statusOfChange == ROBOT_ACCELERATION_PROCESS)
+        {
+            if (smooth_increase_current_speed() )
+            {
+                statusOfChange == ROBOT_ACCELERATION_STOP;
+                timer_start_ms(&timerForSmoothChangeSpeedDeadZone, 30000);
+            }
+        }  
+        else if (statusOfChange != ROBOT_ACCELERATION_STOP )
+            statusOfChange = ROBOT_ACCELERATION_PROCESS;
+    }
+    
+    // Замедление - последние 2 этапа:
+    else
+    {
+        switch(statusOfChange)
+        {
+            case ROBOT_ACCELERATION_STOP:
+            {
+                uint32_t timeOfDeadZone = timer_get_elapsed_time(&timerForSmoothChangeSpeedDeadZone)/1000;
+                timer_start_ms(&timerForSmoothChangeSpeedDeadZone, timeOfDeadZone);
+                statusOfChange == ROBOT_DECELERATION_STOP;
+                {
+                    uint8_t buffer[20] = {0};
+                    num2str(timeOfDeadZone, buffer); 
+                    UART_write_string(debug, "DeadZone:");
+                    UART_write_string(debug, buffer);
+                }
+                break;
+            }
+            case ROBOT_DECELERATION_STOP:
+            {
+                if( timer_report(&timerForSmoothChangeSpeedDeadZone) != TIMER_WORKING)
+                    statusOfChange == ROBOT_DECELERATION_PROCESS;
+                break;
+            }
+            case ROBOT_DECELERATION_PROCESS:
+            {
+                smooth_decrease_current_speed();
+                break;
+            }
+            default:
+            {
+                statusOfChange == ROBOT_DECELERATION_PROCESS;
+            }
+        }
+    }
 }
 /****************************** PRIVATE FUNCTION ******************************/
 
 
 /****************************** PUBLIC FUNCTION *******************************/
 /* 
- * @brief Поворот на указанный угол
+ * @brief Поворот на указанный угол c плавным изменением скорости
  */
 void turn_around_by(int16_t angle)
 {
     int32_t needPulses;
     encoders_reset_pulses();
-    if ( angle <= 0) // поворот против часовой
+    if ( angle > 0) // поворот по часовой
     {
-        motor_set_power(-robot.minSpeed, MOTOR_LEFT);
-        motor_set_power(robot.minSpeed,  MOTOR_RIGHT);
         robot.currentSpeed = robot.minSpeed;
-        needPulses = (int32_t)PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION*angle/360; 
-        while((-1)*encoder_right_get_pulses() > (needPulses >> 1) )
+        needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*angle/360;      
+        while(encoder_left_get_pulses() < needPulses)
         {
-            if( timer_report(&timerSub) != TIMER_WORKING )
-            {
-                timer_start_ms(&timerSub, 100);
-                if (robot.currentSpeed < robot.maxSpeed)
-                {
-                    robot.currentSpeed += (robot.acceleration >> 3);
-                    motor_set_power(-robot.currentSpeed, MOTOR_LEFT);
-                    motor_set_power(robot.currentSpeed,  MOTOR_RIGHT);
-                }
-            } 
-        }
-        while((-1)*encoder_right_get_pulses() > needPulses )
-        {
-            if( timer_report(&timerSub) != TIMER_WORKING )
-            {
-                timer_start_ms(&timerSub, 100);
-                if (robot.currentSpeed > robot.minSpeed)
-                {
-                    robot.currentSpeed -= (robot.deceleration >> 3);
-                    motor_set_power(-robot.currentSpeed, MOTOR_LEFT);
-                    motor_set_power(robot.currentSpeed,  MOTOR_RIGHT);
-                }
-            }
+            motor_set_power(robot.currentSpeed, MOTOR_LEFT);
+            motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
+            smooth_change_current_speed(encoder_left_get_pulses(), needPulses);
         }
     }
-    else if ( angle > 0) // поворот по часовой
+    else if ( angle <= 0) // поворот против часовой
     {
-        motor_set_power(robot.minSpeed,  MOTOR_LEFT);
-        motor_set_power(-robot.minSpeed, MOTOR_RIGHT);
         robot.currentSpeed = robot.minSpeed;
-        needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*(-angle)/360;      
-        while((-1)*encoder_left_get_pulses() > (needPulses >> 1) )
+        needPulses = (int32_t)PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION*(-1)*angle/360; 
+        while(encoder_right_get_pulses() < needPulses )
         {
-            if( timer_report(&timerSub) != TIMER_WORKING )
-            {
-                timer_start_ms(&timerSub, 100);
-                if (robot.currentSpeed < robot.maxSpeed)
-                {
-                    robot.currentSpeed += (robot.acceleration >> 3);
-                    motor_set_power(robot.currentSpeed, MOTOR_LEFT);
-                    motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
-                }
-            }
-        }
-        while((-1)*encoder_left_get_pulses() > needPulses)
-        {
-            if( timer_report(&timerSub) != TIMER_WORKING )
-            {
-                timer_start_ms(&timerSub, 100);
-                if (robot.currentSpeed > robot.minSpeed)
-                {
-                    robot.currentSpeed -= (robot.deceleration >> 3);
-                    motor_set_power(robot.currentSpeed, MOTOR_LEFT);
-                    motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
-                }
-            }
+            motor_set_power(-robot.currentSpeed, MOTOR_LEFT);
+            motor_set_power(robot.currentSpeed,  MOTOR_RIGHT);
+            smooth_change_current_speed(encoder_right_get_pulses(), needPulses);
         }
     }
     else
@@ -321,6 +423,7 @@ void turn_around_by(int16_t angle)
         return;
     }
     motors_stop();
+    robot.currentSpeed = 0;
     robot.angle =+ angle;
 }
 
@@ -363,6 +466,7 @@ void move_forward(uint16_t distance)
     int16_t nowPulses = 0;
     uint8_t speedChange = 0;
     robot.range = 0;
+    robot.currentSpeed = robot.minSpeed;
     
     // Основной цикл:
     while(nowPulses < needPulses)
@@ -391,18 +495,19 @@ void move_forward(uint16_t distance)
             ( encoder_right_get_pulses() > (encoder_left_get_pulses() + PULSES_HYSTERESIS) ) )
         {
             speedChange = ( encoder_left_get_pulses() - encoder_right_get_pulses() )*PROPORTIONAL_REGULATOR;
-            motor_set_power(robot.minSpeed - speedChange,  MOTOR_LEFT);
-            motor_set_power(robot.minSpeed + speedChange, MOTOR_RIGHT);
+            motor_set_power(robot.currentSpeed - speedChange,  MOTOR_LEFT);
+            motor_set_power(robot.currentSpeed + speedChange, MOTOR_RIGHT);
         }
         else
         {
-            motor_set_power(robot.minSpeed - speedChange,  MOTOR_LEFT);
-            motor_set_power(robot.minSpeed + speedChange, MOTOR_RIGHT);
+            motor_set_power(robot.currentSpeed - speedChange,  MOTOR_LEFT);
+            motor_set_power(robot.currentSpeed + speedChange, MOTOR_RIGHT);
         }
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
-        
+       
         /* to do: 4. Плавное изменение скорости двигателей*/
     }
+    robot.currentSpeed = 0;
     motors_stop();
     robot.x += sin(robot.angle)*distance;
     robot.y += cos(robot.angle)*distance;
@@ -416,13 +521,13 @@ void move_to(int16_t x, int16_t y)
 {
     target.x = x;
     target.y = y;
-    if(is_robot_in_target() != 1)
+    if( !is_robot_in_target() )
     {
-        int16_t dx = (robot.x - x);
-        int16_t dy = (robot.y - y);
+        int16_t dx = (x - robot.x);
+        int16_t dy = (y - robot.y);
         uint16_t distance = calculate_distance(dx, dy);
         int16_t angle = calculate_angle(dx, dy);
-        turn_around_by(angle);
+        turn_around_to(angle);
         move_forward(distance);
     }
      
@@ -440,7 +545,11 @@ void init_periphery()
     hard_timer_init();
     soft_timer_init(&timer);
     soft_timer_init(&timerSub);
+    soft_timer_init(&timerForSmoothChangeSpeedDelay);
+    soft_timer_init(&timerForSmoothChangeSpeedDeadZone);
     rangefinder_init();
+    
+    UART_write_string(debug, "Start\n\r");
 }
 
 /* 

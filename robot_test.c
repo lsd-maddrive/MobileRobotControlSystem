@@ -60,6 +60,8 @@ void test_software_timer()
     timer_start_ms(&timer, 50000);
     while(timer_report(&timer) == TIMER_WORKING)
     {
+        timer_start_ms(&timerSub, 5000);
+        
         num2str(count+=5, buffer); 
         UART_write_string(debug, buffer);
         UART_write_string(debug, " sec from 50.\n\r\0");
@@ -79,7 +81,6 @@ void test_software_timer()
         UART_write_string(debug, buffer);
         UART_write_string(debug, "\n\r\n\r\0");
         
-        timer_start_ms(&timerSub, 5000);
         while(timer_report(&timerSub) == TIMER_WORKING);
     }
 }
