@@ -18,6 +18,7 @@ float sin(int16_t a);
 float cos(int16_t a);
 uint16_t abs_16(int16_t num);
 uint32_t abs_32(int32_t num);
+double abs_double(double num);
 
 #endif	/* MATH_H */
 

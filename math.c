@@ -26,7 +26,7 @@ double sqrt(uint16_t number)
 {
     const float ACCURATY = 0.1;
     double root = 1;
-    while (number - root*root < ACCURATY)
+    while (abs_double(number - root*root) > ACCURATY)
     {
         root = (number + root*root)/(2*root);
     }
@@ -118,6 +118,16 @@ uint16_t abs_16(int16_t num)
 * @return модуль числа
 */
 uint32_t abs_32(int32_t num)
+{
+    return (num > 0)?num:-num;
+}
+
+/*
+* @brief Модуль числа типа double
+* @param num - число
+* @return модуль числа
+*/
+double abs_double(double num)
 {
     return (num > 0)?num:-num;
 }
