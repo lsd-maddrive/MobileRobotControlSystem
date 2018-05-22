@@ -16,7 +16,8 @@ double sqrt(uint16_t);
 double atan(float);
 float sin(int16_t a);
 float cos(int16_t a);
-//uint16_t abs(int16_t num);
+uint16_t abs_16(int16_t num);
+uint32_t abs_32(int32_t num);
 
 #endif	/* MATH_H */
 

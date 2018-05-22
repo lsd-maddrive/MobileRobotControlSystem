@@ -35,14 +35,26 @@ double sqrt(uint16_t number)
 
 /*
 * @brief Грубый расчет арктангенса по ряду Тейлора
+* @note Погрешность обычно не больше 1 градуса
 * @param number - число
 * @return atan, в углах
 */
 double atan(float number)
 {
+    // Ряд Тейлора работает только для аргументов <1, поэтому, если больше, то берем обратное число.
+    // В конце преобразуем полученное число в нужное
+    uint8_t isInverse = 0;
+    if(number > 1)
+    {
+        number = 1/number;
+        isInverse = 1;
+    }
     double root_last = number - power(number, 3)*0.333 + power(number, 5)*0.2 - power(number, 7)*0.143;
     double root_next = root_last + power(number, 9)*0.111;
-    return ( (root_last + root_next)*0.5*RAD_TO_DEGREE ); // среднее значение двух итераций в градусах
+    double answer = ( (root_last + root_next)*0.5*RAD_TO_DEGREE ); // среднее значение двух итераций в градусах
+    if (isInverse)
+        return (90 - answer);
+    return answer;
 }
 
 /*
@@ -90,13 +102,22 @@ float cos(int16_t  a)
 }
 
 /*
-* @brief Модуль числа
+* @brief Модуль 2-ух байтного числа
 * @param num - число
 * @return модуль числа
 */
-/*
-uint16_t abso(int16_t num)
+uint16_t abs_16(int16_t num)
 {
     return (num > 0)?num:-num;
 }
+
+
+/*
+* @brief Модуль 4-ех байтного числа
+* @param num - число
+* @return модуль числа
 */
+uint32_t abs_32(int32_t num)
+{
+    return (num > 0)?num:-num;
+}
