@@ -88,10 +88,12 @@ static Timer timerForSmoothChangeSpeedDeadZone;
 Robot_data robot =
 {
     .status = ROBOT_INITIALIZED,
+    .currentSpeed = 0,
+    .speedDifference = 0,
     .x = 0, .y = 0, .angle = 0, .range = 0, 
+    
     .minSpeed = ROBOT_START_MIN_SPEED,
     .maxSpeed = ROBOT_START_MAX_SPEED,
-    .currentSpeed = 0,
     .acceleration = ROBOT_START_ACCELERATION,
     .deceleration = ROBOT_START_DECELERATION
 };
@@ -385,6 +387,40 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
         }
     }
 }
+
+/* 
+ * @brief Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
+ * двигателей с помощью ПИ регулятора.
+ * @note Скорость левого двигателя уменьшается на robot.speedDifference.
+ * @note Скорость правого двигателя увеличивается на robot.speedDifference.
+ * @note Данная функция только меняет значение robot.speedDifference.
+ * @note Стоит быть начеку, чтобы фактическая мощность (скажность) не превысила 100%
+ */
+void PI_regulator()
+{
+    // Константы, полученные эмпирическим путем:
+    const uint8_t PULSES_HYSTERESIS = 0;
+    const float P_REGULATOR = 2;
+    const float I_REGULATOR = 1;
+    
+    // Основной алгоритм:
+    int16_t leftPulses = encoder_left_get_pulses();
+    int16_t rightPulses = encoder_right_get_pulses();
+    static float integralComponent = 0;
+    
+    if( leftPulses > (rightPulses + PULSES_HYSTERESIS) )
+    {
+        if(integralComponent < (robot.maxSpeed - robot.minSpeed) )
+            integralComponent += I_REGULATOR;
+    }
+    else if( rightPulses > (leftPulses + PULSES_HYSTERESIS) )
+    {
+        if(integralComponent > ( (int8_t)robot.minSpeed - robot.maxSpeed) )
+            integralComponent -= I_REGULATOR;
+        
+    }
+    robot.speedDifference = (leftPulses - rightPulses)*P_REGULATOR + integralComponent;
+}
 /****************************** PRIVATE FUNCTION ******************************/
 
 
@@ -447,24 +483,19 @@ void turn_around_to(int16_t angle)
  * считываний показаний дальномера. Если медианное значение дальности среди
  * считанных значений меньше критического, тогда цикл останавливается, а 
  * координаты робота обновляются фактическими. Иначе - продолжаем цикл.
- * 3. Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
- * двигателей с помощью П регулятора.
- * 4. Плавное изменение скорости двигателей от минимальной к максимальной и
+ * 3. Плавное изменение скорости двигателей от минимальной к максимальной и
  * обратно.
- *
+ * 4. Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
+ * двигателей с помощью ПИ регулятора.
+ 
  * @param distance - расстояние (в см)
  */
 void move_forward(uint16_t distance)
 {
-    // Константы, полученные эмпирическим путем:
-    const uint8_t PULSES_HYSTERESIS = 2;
-    const float PROPORTIONAL_REGULATOR = 1;
-    
     // Инициализация переменных исходными значениями:
     const int16_t needPulses = PULSES_IN_CM*distance;
     encoders_reset_pulses();
     int16_t nowPulses = 0;
-    uint8_t speedChange = 0;
     robot.range = 0;
     robot.currentSpeed = robot.minSpeed;
     
@@ -490,22 +521,29 @@ void move_forward(uint16_t distance)
             }
             */
         }
-        // 3. Сохранение прямолинейности движения с помощью П-регулятора:
-        if( (encoder_left_get_pulses() > (encoder_right_get_pulses() + PULSES_HYSTERESIS) ) ||
-            ( encoder_right_get_pulses() > (encoder_left_get_pulses() + PULSES_HYSTERESIS) ) )
-        {
-            speedChange = ( encoder_left_get_pulses() - encoder_right_get_pulses() )*PROPORTIONAL_REGULATOR;
-            motor_set_power(robot.currentSpeed - speedChange,  MOTOR_LEFT);
-            motor_set_power(robot.currentSpeed + speedChange, MOTOR_RIGHT);
-        }
-        else
-        {
-            motor_set_power(robot.currentSpeed - speedChange,  MOTOR_LEFT);
-            motor_set_power(robot.currentSpeed + speedChange, MOTOR_RIGHT);
-        }
+        // 3. Плавное изменение скорости двигателей
+        smooth_change_current_speed(nowPulses, needPulses);
+        
+        // 4. Сохранение прямолинейности движения с помощью П-регулятора:
+        PI_regulator();
+        
+        // Обновление мощности двигателей, при этом мощность должна быть в интервале [0; maxSpeed]:
+        int8_t actualSpeed = robot.currentSpeed - robot.speedDifference;
+        if(actualSpeed > robot.maxSpeed)
+            actualSpeed = robot.maxSpeed;
+        else if(actualSpeed < 0)
+            actualSpeed = 0;    
+        motor_set_power(actualSpeed,  MOTOR_LEFT);
+        
+        actualSpeed = robot.currentSpeed + robot.speedDifference;
+        if(actualSpeed > robot.maxSpeed)
+            actualSpeed = robot.maxSpeed;
+        else if(actualSpeed < 0)
+            actualSpeed = 0; 
+        motor_set_power(actualSpeed, MOTOR_RIGHT);
+        
+        // Обновление текущего кол-ва импульсов:
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
-       
-        /* to do: 4. Плавное изменение скорости двигателей*/
     }
     robot.currentSpeed = 0;
     motors_stop();
