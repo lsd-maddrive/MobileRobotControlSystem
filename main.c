@@ -45,22 +45,31 @@
 
 #include "robot_control.h"
 #include "robot_test.h"
+extern Timer timer;
 
 int main(void) 
 {
     init_periphery();
     Timer logPeriod; 
     soft_timer_init(&logPeriod);
-    move_with_obstacle_avoidance_get_coordinates(50, 50);
+    //test_turn_around_by();        // успешно работает
+    //test_move_to();               // успешно работает
+    //test_measure();               // вроде работает
     while(1)
     {
         //test_motor_control();     // успешно работает
         //test_uart();              // успешно работает
         //test_software_timer();    // успешно работает
-        test_rangefinder();       // успешно работает
-        //test_encoder();             // успешно работает
-        //if(move_with_obstacle_avoidance_do() != FINISHED)
+        //test_rangefinder();       // успешно работает
+        //test_encoder();           // успешно работает
         //test_turn_around_by();
+        
+        static uint8_t status = 0;
+        if (status == 0)
+        {
+            status = 1;
+            //move_with_obstacle_avoidance(100, 0);
+        }
         
         if(timer_report(&logPeriod) != TIMER_WORKING)
         {

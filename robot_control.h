@@ -44,8 +44,7 @@ void move_forward(uint16_t distance);   // Движение вперед на у
 
 void init_periphery();                  // Инициализация всей переферии
 
-void move_with_obstacle_avoidance_get_coordinates(int16_t x, int16_t y);
-void move_with_obstacle_avoidance_do();
+void move_with_obstacle_avoidance(int16_t x, int16_t y);
 
 void log_transmit();
 

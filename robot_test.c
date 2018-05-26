@@ -141,10 +141,35 @@ void test_rangefinder()
 void test_turn_around_by()
 {
     turn_around_by(360);
-    timer_start_ms(&timer, 5000);
+    timer_start_ms(&timer, 2000);
     while(timer_report(&timer) == TIMER_WORKING);
     
     turn_around_by(-360);
-    timer_start_ms(&timer, 5000);
+    timer_start_ms(&timer, 2000);
     while(timer_report(&timer) == TIMER_WORKING);
+}
+
+
+void test_move_to()
+{
+    move_to(10, 0);
+    move_to(10, 10);
+    move_to(20, 10);
+    move_to(20, 20);
+    move_to(10, 20);
+    move_to(10, 30);
+    move_to(0, 30);
+    move_to(0, 20);
+    move_to(-10, 20);
+    move_to(-10, 10);
+    move_to(0, 10);
+    move_to(0, 0);
+}
+
+void test_measure()
+{
+    measure_left();
+    measure_right();
+    log_transmit();
+    
 }

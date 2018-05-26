@@ -37,8 +37,8 @@ enum Initial_data
 {
     ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости см/сек
     ROBOT_START_MAX_SPEED = 50,     // Исходное значение максимальной скорости см/сек
-    ROBOT_START_ACCELERATION = 8,  // Исходное значение ускорения см/сек^2
-    ROBOT_START_DECELERATION = 8,  // Исходное значение замедления см/сек^2
+    ROBOT_START_ACCELERATION = 8,   // Исходное значение ускорения см/сек^2
+    ROBOT_START_DECELERATION = 8,   // Исходное значение замедления см/сек^2
 };
 
 enum Calibration
@@ -49,8 +49,8 @@ enum Calibration
     ROBOT_HALF_WIDTH = ROBOT_WIDTH >> 1,
     ROBOT_HALF_LENGTH = ROBOT_LENGTH >> 1,
     // Характеристики энкодера:
-    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 675,
-    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 710,
+    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 690,
+    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 690,
     PULSES_IN_CM = 9, // в теории (если коэф. сцепления = 1) = 5.79, на практике хорошо будет 8.5
     // Характеристики дальномера:
     RANGEFINDER_ANGLE = 15,
@@ -69,8 +69,8 @@ enum
     NUMBER_OF_MEASUREMENTS_RIGHT = 45/5,
     NUMBER_OF_MEASUREMENTS_ALL = NUMBER_OF_MEASUREMENTS_LEFT + NUMBER_OF_MEASUREMENTS_RIGHT,
     
-    RADIUS_OF_OBSTACLE_SEARCH = 500,
-    RADUIS_OF_MOVEMENT = 250,
+    RADIUS_OF_OBSTACLE_SEARCH = 600,            // 60 см
+    RADUIS_OF_MOVEMENT = 400,                   // 40 см
 };
 
 typedef struct 
@@ -85,6 +85,7 @@ Timer timer;
 Timer timerSub;
 static Timer timerForSmoothChangeSpeedDelay;
 static Timer timerForSmoothChangeSpeedDeadZone;
+static uint16_t arrRanges[NUMBER_OF_MEASUREMENTS_ALL];
 Robot_data robot =
 {
     .status = ROBOT_INITIALIZED,
@@ -110,7 +111,7 @@ static Target_point target =
  * @brief Расчет угла поворота по длинам двух катетов
  * @param dx - катет по горизонтали
  * @param dy - катет по вертикали
- * @return angle - угол в диапазоне (-180; 180] градусов
+ * @return angle - угол в диапазоне [-180; +180] градусов
  */
 int16_t calculate_angle(int16_t dx, int16_t dy)
 {
@@ -193,12 +194,14 @@ uint16_t getMedianRange()
     return range_2;
 }
 
+
 /* 
  * @brief Определение массива показаний дальномера слева от курсового угла
- * @param указатель на массив расстояний
+ * и запись их в массив расстояний в соответствующие ячейки
  */
-void measure_left(uint16_t* arrRanges)
+void measure_left()
 {
+    uint16_t* ptrArr = arrRanges;
     // Поворачиваемся в крайнее левое положение
     turn_around_by(-MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
     
@@ -207,29 +210,41 @@ void measure_left(uint16_t* arrRanges)
     for (countAngle = 0; countAngle < NUMBER_OF_MEASUREMENTS_LEFT; countAngle++)
     {
         turn_around_by(ANGLE_OF_ROTATION_WHEN_MEASURE);
-        *(arrRanges++) = getMedianRange();
+        *(ptrArr++) = getMedianRange();
     }
 }
 
+
 /* 
  * @brief Определение массива показаний дальномера справа от курсового угла
- * @param указатель на массив расстояний
+  * и запись их в массив расстояний в соответствующие ячейки
  */
-void measure_right(uint16_t* arrRanges)
+void measure_right()
 {
+    uint16_t* ptrArr = arrRanges;
     // Поворачиваемся в крайнее правое положение
     turn_around_by(+MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
     
     // Запись данных с конца массива
-    arrRanges += NUMBER_OF_MEASUREMENTS_RIGHT;
+    ptrArr += NUMBER_OF_MEASUREMENTS_ALL;
     
     // Измеряем массив расстояний
     uint8_t countAngle;
     for (countAngle = 0; countAngle <= 10; countAngle++)
     {
         turn_around_by(-ANGLE_OF_ROTATION_WHEN_MEASURE);
-        *(arrRanges--) = getMedianRange();
+        *(ptrArr--) = getMedianRange();
     }
+}
+
+
+/* 
+ * @brief Определение массива показаний дальномера справа и слева от курсового угла
+ */
+void measure()
+{
+    measure_left();
+    measure_right();
 }
 
 /* 
@@ -237,12 +252,13 @@ void measure_right(uint16_t* arrRanges)
  * @param указатель на массив расстояний
  * @return 1, если обнаружено препятствие, 0, если препятствия нет
  */
-uint8_t is_there_obstacle(uint16_t* arrRanges)
+uint8_t is_there_obstacle()
 {
     uint8_t count;
+    int16_t* ptrArr;
     for(count = 0; count < NUMBER_OF_MEASUREMENTS_ALL; count++)
     {
-        if (arrRanges[count] < RADIUS_OF_OBSTACLE_SEARCH)
+        if (*ptrArr++ < RADIUS_OF_OBSTACLE_SEARCH)
             return 1;
     }
     return 0;
@@ -262,7 +278,7 @@ uint8_t is_robot_in_target()
     dx = abs_16( target.x - robot.x );
     dy = abs_16( target.y - robot.y );
     
-    if(dx <= ALLOWABLE_FAULT && dy <= ALLOWABLE_FAULT)
+    if( (dx <= ALLOWABLE_FAULT) && (dy <= ALLOWABLE_FAULT) )
         return 1;
     return 0;  
 }
@@ -427,6 +443,7 @@ void PI_regulator()
 /****************************** PUBLIC FUNCTION *******************************/
 /* 
  * @brief Поворот на указанный угол c плавным изменением скорости
+ * @param angle [-30к; + 30к]
  */
 void turn_around_by(int16_t angle)
 {
@@ -460,15 +477,25 @@ void turn_around_by(int16_t angle)
     }
     motors_stop();
     robot.currentSpeed = 0;
-    robot.angle =+ angle;
+    robot.angle += angle;
 }
 
 /* 
- * @brief Поворот к указанному углу
+ * @brief Поворот к указанному углу по кратчайшему направлению
+ * @param angle - курсовой угол, который должен быть у робота
  */
 void turn_around_to(int16_t angle)
 {
-    turn_around_by(angle - robot.angle);
+    int16_t short_angle = angle - robot.angle;
+    while( abs(short_angle) > 180)
+    {
+        if (short_angle > 180)
+            short_angle -= 360;
+        else if (short_angle < -180)
+            short_angle += 360;
+    }
+    
+    turn_around_by(short_angle);
 }
 
 /* 
@@ -546,9 +573,9 @@ void move_forward(uint16_t distance)
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
     }
     robot.currentSpeed = 0;
-    motors_stop();
-    robot.x += sin(robot.angle)*distance;
     robot.y += cos(robot.angle)*distance;
+    robot.x += sin(robot.angle)*distance;
+    motors_stop();
 }
 
 /* 
@@ -567,8 +594,10 @@ void move_to(int16_t x, int16_t y)
         int16_t angle = calculate_angle(dx, dy);
         turn_around_to(angle);
         move_forward(distance);
+        //robot.angle = angle;
+        //robot.x += dx;
+        //robot.y += dy;
     }
-     
 }
 
 /* 
@@ -590,133 +619,44 @@ void init_periphery()
     UART_write_string(debug, "Start\n\r");
 }
 
-/* 
- * @brief Задать координаты для движения без столкновения с препятствиями
- */
-void move_with_obstacle_avoidance_get_coordinates(int16_t x, int16_t y)
-{
-    target.x = x;
-    target.y = y;
-    robot.status = ROBOT_INITIALIZED;
-}
 
 /* 
  * @brief Движение без столкновения с препятствиями
  */
-void move_with_obstacle_avoidance_do()
+void move_with_obstacle_avoidance(int16_t x, int16_t y)
 {
-    enum Step
+    target.x = x;
+    target.y = y;
+    robot.status = ROBOT_INITIALIZED;
+    while ( !is_robot_in_target() )
     {
-        STEP_1_ROTATE = 1,
-        STEP_2_IS_ROBOT_IN_TARGET = 2,
-        STEP_3_MEASURE_LEFT = 3,
-        STEP_4_MEASURE_RIGHT = 4,
-        STEP_5_IS_THERE_OBSTACLE = 5,
-        STEP_6_ROTATE = 6,
-        STEP_7_MEASURE_LEFT = 7,
-        STEP_8_MEASURE_RIGHT = 8,
-        STEP_9_IS_THERE_OBSTACLE = 9,
-        STEP_10_MOVE_FORWARD = 10,
-        STEP_11_ROTATE = 11,
-        STEP_12_MOVE_FORWARD = 12,
-        STEP_13_CANT_MOVE = 13,
-    };
-    static uint8_t stepCount = STEP_1_ROTATE;
-    static uint16_t arrRanges[NUMBER_OF_MEASUREMENTS_ALL];
-    
-    switch(stepCount)
-    {
-        case STEP_1_ROTATE:
-        {
-            turn_around_to(calculate_angle(target.x - robot.x, target.y - robot.y));
-            stepCount++;
-            break;
-        }
-        case STEP_2_IS_ROBOT_IN_TARGET:
-        {
-            if( is_robot_in_target() )
-            {
-                robot.status = ROBOT_FINISHED;
-            }
-            else
-            {
-                stepCount++;
-                robot.status = ROBOT_IN_PROGRESS;
-            }
-            break;
-        }
-        case STEP_3_MEASURE_LEFT:
-        {
-            measure_left(arrRanges);
-            stepCount++;
-            break;
-        }
-        case STEP_4_MEASURE_RIGHT:
-        {
-            measure_right(arrRanges);
-            stepCount++;
-            break;
-        }
-        case STEP_5_IS_THERE_OBSTACLE:
-        {
-            if ( is_there_obstacle(arrRanges) )
-                stepCount++;
-            else
-                stepCount = STEP_10_MOVE_FORWARD;
-            break;
-        }
-        case STEP_6_ROTATE:
+        int16_t dx = target.x - robot.x;
+        int16_t dy = target.y - robot.y;
+        uint16_t distance = calculate_distance(dx, dy);
+        int16_t angle = calculate_angle(dx, dy);
+        turn_around_to(angle);
+        robot.angle = angle;
+        measure();
+        if( is_there_obstacle() )
         {
             turn_around_by(-90);
-            stepCount++;
-            break;
-        }
-        case STEP_7_MEASURE_LEFT:
-        {
-            measure_left(arrRanges);
-            stepCount++;
-            break;
-        }
-        case STEP_8_MEASURE_RIGHT:
-        {
-            measure_right(arrRanges);
-            stepCount++;
-            break;
-        }
-        case STEP_9_IS_THERE_OBSTACLE:
-        {
-            if ( is_there_obstacle(arrRanges) )
-                stepCount++;
+            robot.angle -= angle;
+            measure();
+            if( is_there_obstacle() )
+                break;
             else
-                stepCount = STEP_10_MOVE_FORWARD;
-            break;
+            {
+                move_forward(RADUIS_OF_MOVEMENT);
+                turn_around_by(90);
+                move_forward(RADUIS_OF_MOVEMENT);
+            }
         }
-        case STEP_10_MOVE_FORWARD:
+        else
         {
-            move_forward(RADUIS_OF_MOVEMENT);
-            stepCount++;
-            break;
-        }
-        case STEP_11_ROTATE:
-        {
-            turn_around_by(-90);
-            stepCount = STEP_3_MEASURE_LEFT;
-            break;
-        }
-        case STEP_12_MOVE_FORWARD:
-        {
-            move_forward(RADUIS_OF_MOVEMENT);
-            stepCount = STEP_2_IS_ROBOT_IN_TARGET;
-            break;
-        }
-        case STEP_13_CANT_MOVE:
-        {
-            robot.status = ROBOT_CANT_MOVE;
-            break;
-        }
-        default:
-        {
-            break;
+            if (distance < RADUIS_OF_MOVEMENT)
+                move_forward(distance);
+            else
+                move_forward(RADUIS_OF_MOVEMENT);
         }
     }
 }
@@ -726,38 +666,16 @@ void move_with_obstacle_avoidance_do()
  */
 void log_transmit()
 {
-    //uint8_t arrOfData[10];
-    //memcpy(arrOfData, &robot, 10);
-    //UART_transmit(debug, arrOfData, 10);
-    //UART_transmit(debug, "\n\r", 2);
-    
     char buf[12];
     UART_write_string(debug, "\nlog:");
     
-    //num2str(robot.status, buf);
-    //UART_write_string(debug, "\r\nstatus: ");
-    //UART_write_string(debug, buf);
+    uint8_t count;
+    for(count = 0; count < NUMBER_OF_MEASUREMENTS_ALL; count++)
+    {
+        num2str(arrRanges[count], buf);
+        UART_write_string(debug, " ");
+        UART_write_string(debug, buf);
+    }
     
-    num2str(robot.x, buf);
-    UART_write_string(debug, "\nrobot.x: ");
-    UART_write_string(debug, buf);
-    
-    num2str(robot.y, buf);
-    UART_write_string(debug, "\nrobot.y: ");
-    UART_write_string(debug, buf);
-    
-    //num2str(target.x, buf);
-    //UART_write_string(debug, "\r\ntarget.x: ");
-    //UART_write_string(debug, buf);
-    
-    //num2str(target.y, buf);
-    //UART_write_string(debug, "\r\ntarget.y: ");
-    //UART_write_string(debug, buf);
-    
-    num2str(robot.angle, buf);
-    UART_write_string(debug, "\nrobot.angle: ");
-    UART_write_string(debug, buf);
-    
-    UART_write_string(debug, "\r\n");
 }
 /****************************** PUBLIC FUNCTION *******************************/
