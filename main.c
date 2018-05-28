@@ -68,7 +68,7 @@ int main(void)
         if (status == 0)
         {
             status = 1;
-            //move_with_obstacle_avoidance(100, 0);
+            move_with_obstacle_avoidance(0, 50);
         }
         
         if(timer_report(&logPeriod) != TIMER_WORKING)

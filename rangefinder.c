@@ -52,11 +52,11 @@ void rangefinder_give_impulse()
 
 
 /*
-* @brief Получить измеренное расстояние (в мм)
+* @brief Получить измеренное расстояние (в cм)
 */
 uint16_t rangefinder_get_range()
 {
-    return (float)range*0.085 + 14.3;
+    return (float)range*0.0085 + 1.43;
 }      
 
 

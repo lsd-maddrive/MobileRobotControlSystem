@@ -57,7 +57,7 @@ enum Calibration
     RANGEFINDER_HALF_ANGLE = 7,
     RANGEFINDER_MAX_DISTANCE = 1000, // 100 см (по datasheet 4 - 4.5 метра)
     // Другие характеристики:
-    OBSTACLE_DANGEROUS_DISTANCE = 500,  // 50 см
+    OBSTACLE_DANGEROUS_DISTANCE = 50,  // 50 см
 };
 
 // Сканирование пространства:
@@ -65,12 +65,12 @@ enum
 {
     MAX_ANGLE_OF_ROTATION_WHEN_MEASURE = 45,    // 45 градусов
     ANGLE_OF_ROTATION_WHEN_MEASURE = 5,         // 5 градусов
-    NUMBER_OF_MEASUREMENTS_LEFT = 45/5 + 1,
-    NUMBER_OF_MEASUREMENTS_RIGHT = 45/5,
+    NUMBER_OF_MEASUREMENTS_LEFT = 45/5 + 1,     // [MAX:ITER:0]
+    NUMBER_OF_MEASUREMENTS_RIGHT = 45/5,        // [MAX:ITER:ITER]
     NUMBER_OF_MEASUREMENTS_ALL = NUMBER_OF_MEASUREMENTS_LEFT + NUMBER_OF_MEASUREMENTS_RIGHT,
     
-    RADIUS_OF_OBSTACLE_SEARCH = 600,            // 60 см
-    RADUIS_OF_MOVEMENT = 400,                   // 40 см
+    RADIUS_OF_OBSTACLE_SEARCH = 30,            // 60 см
+    RADIUS_OF_MOVEMENT = 20,                   // 40 см
 };
 
 typedef struct 
@@ -255,7 +255,7 @@ void measure()
 uint8_t is_there_obstacle()
 {
     uint8_t count;
-    int16_t* ptrArr;
+    int16_t* ptrArr = arrRanges;
     for(count = 0; count < NUMBER_OF_MEASUREMENTS_ALL; count++)
     {
         if (*ptrArr++ < RADIUS_OF_OBSTACLE_SEARCH)
@@ -636,27 +636,27 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
         int16_t angle = calculate_angle(dx, dy);
         turn_around_to(angle);
         robot.angle = angle;
-        measure();
+        test_measure(); //measure();
         if( is_there_obstacle() )
         {
             turn_around_by(-90);
             robot.angle -= angle;
-            measure();
+            test_measure(); //measure();
             if( is_there_obstacle() )
                 break;
             else
             {
-                move_forward(RADUIS_OF_MOVEMENT);
+                move_forward(RADIUS_OF_MOVEMENT);
                 turn_around_by(90);
-                move_forward(RADUIS_OF_MOVEMENT);
+                move_forward(RADIUS_OF_MOVEMENT);
             }
         }
         else
         {
-            if (distance < RADUIS_OF_MOVEMENT)
+            if (distance < RADIUS_OF_MOVEMENT)
                 move_forward(distance);
             else
-                move_forward(RADUIS_OF_MOVEMENT);
+                move_forward(RADIUS_OF_MOVEMENT);
         }
     }
 }

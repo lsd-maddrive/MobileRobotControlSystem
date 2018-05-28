@@ -132,7 +132,7 @@ void test_rangefinder()
     num2str(range, buffer); 
     UART_write_string(debug, "\nrange = ");
     UART_write_string(debug, buffer);
-    UART_write_string(debug, " mm\n\r\n\r");
+    UART_write_string(debug, " cm\n\r\n\r");
     
     timer_start_ms(&timer, 500);
     while(timer_report(&timer) == TIMER_WORKING);
@@ -168,8 +168,6 @@ void test_move_to()
 
 void test_measure()
 {
-    measure_left();
-    measure_right();
+    measure();
     log_transmit();
-    
 }
