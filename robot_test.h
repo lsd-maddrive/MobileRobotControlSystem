@@ -14,6 +14,7 @@ void test_encoder();            // Проверка работы модуля en
 void test_rangefinder();        // Проверка работы модуля rangefinder
 void test_turn_around_by();     // Проверка базового действия - поворота двигателя
 void test_move_to();            // Проверка базового действия - перемещение по координатам
+void test_smooth_change_speed();// Проверка плавного изменения скорости робота
 
 #endif	/* ROBOT_TEST_H */
 

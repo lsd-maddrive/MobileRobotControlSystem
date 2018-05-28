@@ -171,3 +171,11 @@ void test_measure()
     measure();
     log_transmit();
 }
+
+void test_smooth_change_speed()
+{
+    robot.minSpeed = 25;
+    robot.maxSpeed = 60;
+    turn_around_by(360);
+    turn_around_by(-360);
+}

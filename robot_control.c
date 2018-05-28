@@ -69,7 +69,7 @@ enum
     NUMBER_OF_MEASUREMENTS_RIGHT = 45/5,        // [MAX:ITER:ITER]
     NUMBER_OF_MEASUREMENTS_ALL = NUMBER_OF_MEASUREMENTS_LEFT + NUMBER_OF_MEASUREMENTS_RIGHT,
     
-    RADIUS_OF_OBSTACLE_SEARCH = 30,            // 60 см
+    RADIUS_OF_OBSTACLE_SEARCH = 35,            // 60 см
     RADIUS_OF_MOVEMENT = 20,                   // 40 см
 };
 
@@ -294,6 +294,7 @@ uint8_t smooth_increase_current_speed()
     {
         if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
         {
+            UART_write_string(debug, "i\n\r");
             timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
             robot.currentSpeed += (robot.acceleration >> 3);
         }
@@ -311,11 +312,11 @@ uint8_t smooth_increase_current_speed()
  */
 void smooth_decrease_current_speed()
 {
-    UART_write_string(debug, "dec\n\r");
     if (robot.currentSpeed > robot.minSpeed)
     {
         if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
         {
+            UART_write_string(debug, "d\n\r");
             timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
             robot.currentSpeed -= (robot.deceleration >> 3);
         }
@@ -374,31 +375,29 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
         {
             case ROBOT_ACCELERATION_STOP:
             {
+                UART_write_string(debug, "1");
                 uint32_t timeOfDeadZone = timer_get_elapsed_time(&timerForSmoothChangeSpeedDeadZone)/1000;
                 timer_start_ms(&timerForSmoothChangeSpeedDeadZone, timeOfDeadZone);
                 statusOfChange == ROBOT_DECELERATION_STOP;
-                {
-                    uint8_t buffer[20] = {0};
-                    num2str(timeOfDeadZone, buffer); 
-                    UART_write_string(debug, "DeadZone:");
-                    UART_write_string(debug, buffer);
-                }
                 break;
             }
             case ROBOT_DECELERATION_STOP:
             {
+                UART_write_string(debug, "2");
                 if( timer_report(&timerForSmoothChangeSpeedDeadZone) != TIMER_WORKING)
                     statusOfChange == ROBOT_DECELERATION_PROCESS;
                 break;
             }
             case ROBOT_DECELERATION_PROCESS:
             {
+                UART_write_string(debug, "3");
                 smooth_decrease_current_speed();
                 break;
             }
             default:
             {
-                statusOfChange == ROBOT_DECELERATION_PROCESS;
+                UART_write_string(debug, "4");
+                statusOfChange = ROBOT_DECELERATION_PROCESS;
             }
         }
     }
@@ -452,11 +451,12 @@ void turn_around_by(int16_t angle)
     if ( angle > 0) // поворот по часовой
     {
         robot.currentSpeed = robot.minSpeed;
-        needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*angle/360;      
+        needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*angle/360;  
         while(encoder_left_get_pulses() < needPulses)
         {
             motor_set_power(robot.currentSpeed, MOTOR_LEFT);
             motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
+            //smooth_decrease_current_speed(encoder_left_get_pulses(), needPulses);
             smooth_change_current_speed(encoder_left_get_pulses(), needPulses);
         }
     }
@@ -648,7 +648,7 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
             {
                 move_forward(RADIUS_OF_MOVEMENT);
                 turn_around_by(90);
-                move_forward(RADIUS_OF_MOVEMENT);
+                move_forward(RADIUS_OF_MOVEMENT << 1);
             }
         }
         else
