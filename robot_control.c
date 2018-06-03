@@ -50,6 +50,14 @@ typedef enum
 }Movement_t;
 
 
+typedef enum 
+{
+    SECTOR_CLEAR = 0,
+    OBSTACLE_TO_THE_LEFT = 1,
+    OBSTACLE_TO_THE_RIGHT = 2,
+}Result_of_scan_t;
+
+
 enum Calibration
 {
     // Характеристики робота:
@@ -74,11 +82,12 @@ enum
 {
     MAX_ANGLE_OF_ROTATION_WHEN_MEASURE = 45,    // 45 градусов
     ANGLE_OF_ROTATION_WHEN_MEASURE = 5,         // 5 градусов
-    NUMBER_OF_MEASUREMENTS_LEFT = 45/5 + 1,     // [MAX:ITER:0]
-    NUMBER_OF_MEASUREMENTS_RIGHT = 45/5,        // [MAX:ITER:ITER]
-    NUMBER_OF_MEASUREMENTS_ALL = NUMBER_OF_MEASUREMENTS_LEFT + NUMBER_OF_MEASUREMENTS_RIGHT,
+    NUMBER_OF_ROTATIONS_LEFT = 9,               // 45/5
+    NUMBER_OF_ROTATIONS_RIGHT = 9,              // 45/5
+    NUMBER_OF_MEASUREMENTS_LEFT = 10,           // [-MAX : ITER : 0] = 45/5 + 1
+    NUMBER_OF_MEASUREMENTS_RIGHT = 10,          // [0 : ITER : +MAX] = 45/5 + 1
     
-    RADIUS_OF_OBSTACLE_SEARCH = 35,            // 60 см
+    RADIUS_OF_OBSTACLE_SEARCH = 40,            // 60 см
     RADIUS_OF_MOVEMENT = 20,                   // 40 см
 };
 
@@ -94,7 +103,8 @@ Timer timer;
 Timer timerSub;
 static Timer timerForSmoothChangeSpeedDelay;
 static Timer timerForSmoothChangeSpeedDeadZone;
-static uint16_t arrRanges[NUMBER_OF_MEASUREMENTS_ALL];
+static uint16_t arrRangesLeft[NUMBER_OF_MEASUREMENTS_LEFT];
+static uint16_t arrRangesRight[NUMBER_OF_MEASUREMENTS_RIGHT];
 Robot_data robot =
 {
     .status = ROBOT_INITIALIZED,
@@ -205,18 +215,32 @@ uint16_t getMedianRange()
 
 
 /* 
- * @brief Определение массива показаний дальномера слева от курсового угла
- * и запись их в массив расстояний в соответствующие ячейки
+ * @brief Определение массива показаний дальномера слева на 45 градусов от курсового угла
+ * @note Обратно не поворачиваем
  */
 void measure_left()
 {
-    uint16_t* ptrArr = arrRanges;
-    // Поворачиваемся в крайнее левое положение
-    turn_around_by(-MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
-    
-    // Измеряем массив расстояний
-    uint8_t countAngle;
-    for (countAngle = 0; countAngle < NUMBER_OF_MEASUREMENTS_LEFT; countAngle++)
+    uint16_t* ptrArr = arrRangesLeft;
+    uint8_t countOfRotation;
+    *(ptrArr++) = getMedianRange();
+    for (countOfRotation = 0; countOfRotation < NUMBER_OF_ROTATIONS_LEFT; countOfRotation++)
+    {
+        turn_around_by(-ANGLE_OF_ROTATION_WHEN_MEASURE);
+        *(ptrArr++) = getMedianRange();
+    }
+}
+
+
+/* 
+ * @brief Определение массива показаний дальномера справа на 45 градусов от курсового угла
+ * @note Обратно не поворачиваем
+ */
+void measure_right()
+{
+    uint16_t* ptrArr = arrRangesRight;
+    uint8_t countOfRotation;
+    *(ptrArr++) = getMedianRange();
+    for (countOfRotation = 0; countOfRotation < NUMBER_OF_ROTATIONS_RIGHT; countOfRotation++)
     {
         turn_around_by(ANGLE_OF_ROTATION_WHEN_MEASURE);
         *(ptrArr++) = getMedianRange();
@@ -225,52 +249,51 @@ void measure_left()
 
 
 /* 
- * @brief Определение массива показаний дальномера справа от курсового угла
-  * и запись их в массив расстояний в соответствующие ячейки
- */
-void measure_right()
-{
-    uint16_t* ptrArr = arrRanges;
-    // Поворачиваемся в крайнее правое положение
-    turn_around_by(+MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
-    
-    // Запись данных с конца массива
-    ptrArr += NUMBER_OF_MEASUREMENTS_ALL;
-    
-    // Измеряем массив расстояний
-    uint8_t countAngle;
-    for (countAngle = 0; countAngle <= 10; countAngle++)
-    {
-        turn_around_by(-ANGLE_OF_ROTATION_WHEN_MEASURE);
-        *(ptrArr--) = getMedianRange();
-    }
-}
-
-
-/* 
  * @brief Определение массива показаний дальномера справа и слева от курсового угла
+ * @note С поворотом обратно
  */
 void measure()
 {
     measure_left();
+    turn_around_by(MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
     measure_right();
+    turn_around_by(-MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
 }
 
 /* 
- * @brief Вовзвращает 1, если будет обнаружено препятствие, иначе 0
- * @param указатель на массив расстояний
- * @return 1, если обнаружено препятствие, 0, если препятствия нет
+ * @brief Анализ массива расстояний, полученных от дальномера
+ * @return OBSTACLE_TO_THE_LEFT или OBSTACLE_TO_THE_RIGHT, если обнаружено препятствие, 
+   иначе SECTOR_CLEAR
  */
-uint8_t is_there_obstacle()
+Result_of_scan_t where_is_there_obstacle()
 {
-    uint8_t count;
-    int16_t* ptrArr = arrRanges;
-    for(count = 0; count < NUMBER_OF_MEASUREMENTS_ALL; count++)
+    int8_t count;
+    int16_t* ptrArrLeft = arrRangesLeft + NUMBER_OF_MEASUREMENTS_LEFT;
+    int16_t* ptrArrRight = arrRangesRight + NUMBER_OF_MEASUREMENTS_RIGHT;
+    int8_t maxCount = 0;
+    
+    for(count = NUMBER_OF_MEASUREMENTS_LEFT; count > 0; count--)
     {
-        if (*ptrArr++ < RADIUS_OF_OBSTACLE_SEARCH)
-            return 1;
+        if( *(--ptrArrLeft) > RADIUS_OF_OBSTACLE_SEARCH)
+        {
+            maxCount = -count;
+            break;
+        }
     }
-    return 0;
+    for(count = NUMBER_OF_MEASUREMENTS_RIGHT; count > 0; count--)
+    {
+        if( *(--ptrArrRight) > RADIUS_OF_OBSTACLE_SEARCH)
+        {
+            maxCount = count;
+            break;
+        }
+    }
+    
+    if(count < 0)
+        return OBSTACLE_TO_THE_LEFT;
+    else if (count > 0)
+        return OBSTACLE_TO_THE_RIGHT; 
+    return SECTOR_CLEAR;
 }
 
 /* 
@@ -303,7 +326,6 @@ uint8_t smooth_increase_current_speed()
     {
         if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
         {
-            UART_write_string(debug, "i\n\r");
             timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
             robot.currentSpeed += (robot.acceleration >> 3);
         }
@@ -325,7 +347,6 @@ void smooth_decrease_current_speed()
     {
         if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
         {
-            UART_write_string(debug, "d\n\r");
             timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
             robot.currentSpeed -= (robot.deceleration >> 3);
         }
@@ -662,21 +683,40 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
         int16_t dx = target.x - robot.x;
         int16_t dy = target.y - robot.y;
         uint16_t distance = calculate_distance(dx, dy);
-        int16_t angle = calculate_angle(dx, dy);
-        turn_around_to(angle);
-        robot.angle = angle;
-        test_measure(); //measure();
-        if( is_there_obstacle() )
+        turn_around_to(calculate_angle(dx, dy));
+        
+        measure_right();
+        turn_around_by(-MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
+        measure_left();
+        log_transmit();
+        
+        if( where_is_there_obstacle() == OBSTACLE_TO_THE_LEFT )
         {
-            turn_around_by(-90);
-            robot.angle -= angle;
+            turn_around_by(+135);
+
             test_measure(); //measure();
-            if( is_there_obstacle() )
+            
+            if( where_is_there_obstacle() != SECTOR_CLEAR)
                 break;
             else
             {
-                move_forward(RADIUS_OF_MOVEMENT);
-                turn_around_by(90);
+                move_forward(RADIUS_OF_MOVEMENT << 1);
+                turn_around_by(-90);
+                move_forward(RADIUS_OF_MOVEMENT << 1);
+            }
+        }
+        else if( where_is_there_obstacle() == OBSTACLE_TO_THE_RIGHT )
+        {
+            turn_around_by(-45);
+
+            test_measure(); //measure();
+            
+            if( where_is_there_obstacle() != SECTOR_CLEAR)
+                break;
+            else
+            {
+                move_forward(RADIUS_OF_MOVEMENT << 1);
+                turn_around_by(+90);
                 move_forward(RADIUS_OF_MOVEMENT << 1);
             }
         }
@@ -699,9 +739,15 @@ void log_transmit()
     UART_write_string(debug, "\nlog:");
     
     uint8_t count;
-    for(count = 0; count < NUMBER_OF_MEASUREMENTS_ALL; count++)
+    for(count = NUMBER_OF_MEASUREMENTS_LEFT-1; count >= 0; count--)
     {
-        num2str(arrRanges[count], buf);
+        num2str(arrRangesLeft[count], buf);
+        UART_write_string(debug, " ");
+        UART_write_string(debug, buf);
+    }
+    for(count = 0; count < NUMBER_OF_MEASUREMENTS_RIGHT; count++)
+    {
+        num2str(arrRangesRight[count], buf);
         UART_write_string(debug, " ");
         UART_write_string(debug, buf);
     }
