@@ -432,6 +432,65 @@ void PI_regulator()
     }
     robot.speedDifference = (leftPulses - rightPulses)*P_REGULATOR + integralComponent;
 }
+
+
+/* 
+ * @brief Обновление скорости робота с учетом влияния ПИ-регулятора и плавного
+ * изменения скорости.
+ * @note скорость робота в любом случае остается в интервале [0; maxSpeed]
+ */
+void update_robot_speed()
+{
+    int8_t actualSpeed = robot.currentSpeed - robot.speedDifference;
+    if(actualSpeed > robot.maxSpeed)
+        actualSpeed = robot.maxSpeed;
+    else if(actualSpeed < 0)
+        actualSpeed = 0;    
+    motor_set_power(actualSpeed,  MOTOR_LEFT);
+    
+    actualSpeed = robot.currentSpeed + robot.speedDifference;
+    if(actualSpeed > robot.maxSpeed)
+        actualSpeed = robot.maxSpeed;
+    else if(actualSpeed < 0)
+        actualSpeed = 0; 
+    motor_set_power(actualSpeed, MOTOR_RIGHT);
+}
+
+
+/* 
+ * @brief Пассивная проверка на наличие препятствия
+ * @note Не влияет на движение робота
+ */
+void passive_obstacle_check()
+{
+    if (timer_report(&timer) != TIMER_WORKING)
+    {
+        rangefinder_give_impulse();
+        timer_start_ms(&timer, 100);
+        robot.range = rangefinder_get_range();
+    }
+}
+
+
+/* 
+ * @brief Активная проверка на наличие препятствия
+ * @note робот останавливается во время проверки
+ * @param ptrDistance - указатель на расстояние, необходимое проехать
+ */
+void active_obstacle_check(uint16_t* ptrDistance)
+{
+    if (robot.range < OBSTACLE_DANGEROUS_DISTANCE)
+    {
+        /*
+        motors_stop();
+        if (getMedianRange() < OBSTACLE_DANGEROUS_DISTANCE)
+        {
+            *distance = nowPulses/PULSES_IN_CM;
+            break;
+        }
+        */
+    }
+}
 /****************************** PRIVATE FUNCTION ******************************/
 
 
@@ -515,59 +574,22 @@ void turn_around_to(int16_t angle)
  */
 void move_forward(uint16_t distance)
 {
-    // Инициализация переменных исходными значениями:
     const int16_t needPulses = PULSES_IN_CM*distance;
     encoders_reset_pulses();
     int16_t nowPulses = 0;
     robot.range = 0;
     robot.currentSpeed = robot.minSpeed;
     
-    // Основной цикл:
     while(nowPulses < needPulses)
     {
-        // 1. Пассивная проверка на наличие препятствия (не влияет на движение робота):
-        if (timer_report(&timer) != TIMER_WORKING)
-        {
-            rangefinder_give_impulse();
-            timer_start_ms(&timer, 100);
-            robot.range = rangefinder_get_range();
-        }
-        // 2. Активная проверка на наличие препятствия (робот остановливается):
-        if (robot.range < OBSTACLE_DANGEROUS_DISTANCE)
-        {
-            /*
-            motors_stop();
-            if (getMedianRange() < OBSTACLE_DANGEROUS_DISTANCE)
-            {
-                distance = nowPulses/PULSES_IN_CM;
-                break;
-            }
-            */
-        }
-        // 3. Плавное изменение скорости двигателей
+        passive_obstacle_check();
+        active_obstacle_check(&distance);
         smooth_change_current_speed(nowPulses, needPulses);
-        
-        // 4. Сохранение прямолинейности движения с помощью П-регулятора:
         PI_regulator();
-        
-        // Обновление мощности двигателей, при этом мощность должна быть в интервале [0; maxSpeed]:
-        int8_t actualSpeed = robot.currentSpeed - robot.speedDifference;
-        if(actualSpeed > robot.maxSpeed)
-            actualSpeed = robot.maxSpeed;
-        else if(actualSpeed < 0)
-            actualSpeed = 0;    
-        motor_set_power(actualSpeed,  MOTOR_LEFT);
-        
-        actualSpeed = robot.currentSpeed + robot.speedDifference;
-        if(actualSpeed > robot.maxSpeed)
-            actualSpeed = robot.maxSpeed;
-        else if(actualSpeed < 0)
-            actualSpeed = 0; 
-        motor_set_power(actualSpeed, MOTOR_RIGHT);
-        
-        // Обновление текущего кол-ва импульсов:
+        update_robot_speed();
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
     }
+    
     robot.currentSpeed = 0;
     robot.y += cos(robot.angle)*distance;
     robot.x += sin(robot.angle)*distance;
