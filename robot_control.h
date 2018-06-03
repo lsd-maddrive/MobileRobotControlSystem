@@ -24,7 +24,7 @@ typedef struct
 {
     Robot_status status;
     uint8_t currentSpeed;
-    int8_t speedDifference;
+    int8_t speedRegulator;
     int16_t x;
     int16_t y;
     int16_t angle;

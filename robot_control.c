@@ -41,6 +41,15 @@ enum Initial_data
     ROBOT_START_DECELERATION = 8,   // Исходное значение замедления см/сек^2
 };
 
+
+typedef enum 
+{
+    MOVE_FORWARD = 0,
+    ROTATE_CLOCKWISE = 1,
+    ROTATE_COUNTER_CLOCKWISE = 2,
+}Movement_t;
+
+
 enum Calibration
 {
     // Характеристики робота:
@@ -90,7 +99,7 @@ Robot_data robot =
 {
     .status = ROBOT_INITIALIZED,
     .currentSpeed = 0,
-    .speedDifference = 0,
+    .speedRegulator = 0,
     .x = 0, .y = 0, .angle = 0, .range = 0, 
     
     .minSpeed = ROBOT_START_MIN_SPEED,
@@ -430,7 +439,7 @@ void PI_regulator()
             integralComponent -= I_REGULATOR;
         
     }
-    robot.speedDifference = (leftPulses - rightPulses)*P_REGULATOR + integralComponent;
+    robot.speedRegulator = (leftPulses - rightPulses)*P_REGULATOR + integralComponent;
 }
 
 
@@ -439,21 +448,27 @@ void PI_regulator()
  * изменения скорости.
  * @note скорость робота в любом случае остается в интервале [0; maxSpeed]
  */
-void update_robot_speed()
+void update_robot_speed(Movement_t type)
 {
-    int8_t actualSpeed = robot.currentSpeed - robot.speedDifference;
+    int8_t actualSpeed = robot.currentSpeed - robot.speedRegulator;
     if(actualSpeed > robot.maxSpeed)
         actualSpeed = robot.maxSpeed;
     else if(actualSpeed < 0)
-        actualSpeed = 0;    
-    motor_set_power(actualSpeed,  MOTOR_LEFT);
+        actualSpeed = 0;   
+    if ( (type == MOVE_FORWARD) && (type == ROTATE_CLOCKWISE) )
+        motor_set_power(actualSpeed,  MOTOR_LEFT);
+    else
+        motor_set_power(-actualSpeed,  MOTOR_LEFT);
     
-    actualSpeed = robot.currentSpeed + robot.speedDifference;
+    actualSpeed = robot.currentSpeed + robot.speedRegulator;
     if(actualSpeed > robot.maxSpeed)
         actualSpeed = robot.maxSpeed;
     else if(actualSpeed < 0)
         actualSpeed = 0; 
-    motor_set_power(actualSpeed, MOTOR_RIGHT);
+    if ( (type == MOVE_FORWARD) && (type == ROTATE_COUNTER_CLOCKWISE) )
+        motor_set_power(actualSpeed, MOTOR_RIGHT);
+    else
+        motor_set_power(-actualSpeed, MOTOR_RIGHT);
 }
 
 
@@ -501,29 +516,30 @@ void active_obstacle_check(uint16_t* ptrDistance)
  */
 void turn_around_by(int16_t angle)
 {
+    int16_t nowPulses = 0;
     int32_t needPulses;
     encoders_reset_pulses();
+    robot.currentSpeed = robot.minSpeed;
     if ( angle > 0) // поворот по часовой
     {
-        robot.currentSpeed = robot.minSpeed;
         needPulses = (int32_t)PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION*angle/360;  
-        while(encoder_left_get_pulses() < needPulses)
+        while(nowPulses < needPulses)
         {
-            motor_set_power(robot.currentSpeed, MOTOR_LEFT);
-            motor_set_power(-robot.currentSpeed,  MOTOR_RIGHT);
-            //smooth_decrease_current_speed(encoder_left_get_pulses(), needPulses);
-            smooth_change_current_speed(encoder_left_get_pulses(), needPulses);
+            update_robot_speed(ROTATE_CLOCKWISE);
+            smooth_change_current_speed(nowPulses, needPulses);
+            PI_regulator();
+            nowPulses = ( encoder_left_get_pulses() - encoder_right_get_pulses() ) >> 1;
         }
     }
     else if ( angle <= 0) // поворот против часовой
     {
-        robot.currentSpeed = robot.minSpeed;
         needPulses = (int32_t)PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION*(-1)*angle/360; 
-        while(encoder_right_get_pulses() < needPulses )
+        while(nowPulses < needPulses )
         {
-            motor_set_power(-robot.currentSpeed, MOTOR_LEFT);
-            motor_set_power(robot.currentSpeed,  MOTOR_RIGHT);
-            smooth_change_current_speed(encoder_right_get_pulses(), needPulses);
+            update_robot_speed(ROTATE_COUNTER_CLOCKWISE);
+            smooth_change_current_speed(nowPulses, needPulses);
+            PI_regulator();
+            nowPulses = ( encoder_right_get_pulses() - encoder_left_get_pulses() ) >> 1;
         }
     }
     else
@@ -586,7 +602,7 @@ void move_forward(uint16_t distance)
         active_obstacle_check(&distance);
         smooth_change_current_speed(nowPulses, needPulses);
         PI_regulator();
-        update_robot_speed();
+        update_robot_speed(MOVE_FORWARD);
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
     }
     
