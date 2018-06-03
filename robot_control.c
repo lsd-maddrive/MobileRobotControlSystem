@@ -375,7 +375,6 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
         {
             case ROBOT_ACCELERATION_STOP:
             {
-                UART_write_string(debug, "1");
                 uint32_t timeOfDeadZone = timer_get_elapsed_time(&timerForSmoothChangeSpeedDeadZone)/1000;
                 timer_start_ms(&timerForSmoothChangeSpeedDeadZone, timeOfDeadZone);
                 statusOfChange == ROBOT_DECELERATION_STOP;
@@ -383,20 +382,17 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
             }
             case ROBOT_DECELERATION_STOP:
             {
-                UART_write_string(debug, "2");
                 if( timer_report(&timerForSmoothChangeSpeedDeadZone) != TIMER_WORKING)
                     statusOfChange == ROBOT_DECELERATION_PROCESS;
                 break;
             }
             case ROBOT_DECELERATION_PROCESS:
             {
-                UART_write_string(debug, "3");
                 smooth_decrease_current_speed();
                 break;
             }
             default:
             {
-                UART_write_string(debug, "4");
                 statusOfChange = ROBOT_DECELERATION_PROCESS;
             }
         }
@@ -590,13 +586,8 @@ void move_to(int16_t x, int16_t y)
     {
         int16_t dx = (x - robot.x);
         int16_t dy = (y - robot.y);
-        uint16_t distance = calculate_distance(dx, dy);
-        int16_t angle = calculate_angle(dx, dy);
-        turn_around_to(angle);
-        move_forward(distance);
-        //robot.angle = angle;
-        //robot.x += dx;
-        //robot.y += dy;
+        turn_around_to(calculate_angle(dx, dy));
+        move_forward(calculate_distance(dx, dy));
     }
 }
 
