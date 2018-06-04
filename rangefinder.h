@@ -8,6 +8,7 @@
 #include "hard.h"
 
 void rangefinder_init();            // Инициализация датчика
+uint16_t rangefinder_do();          // Выполнить измерение расстояния
 void rangefinder_give_impulse();    // Подать импульс на датчик
 uint16_t rangefinder_get_range();   // Получить измеренное расстояние (в мм)
 

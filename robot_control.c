@@ -186,20 +186,9 @@ uint16_t calculate_distance(int16_t dx, int16_t dy)
  */
 uint16_t getMedianRange()
 {
-    rangefinder_give_impulse();
-    timer_start_ms(&timer, 100);
-    while(timer_report(&timer) == TIMER_WORKING);
-    uint16_t range_1 = rangefinder_get_range();
-    
-    rangefinder_give_impulse();
-    timer_start_ms(&timer, 100);
-    while(timer_report(&timer) == TIMER_WORKING);
-    uint16_t range_2 = rangefinder_get_range();
-    
-    rangefinder_give_impulse();
-    timer_start_ms(&timer, 100);
-    while(timer_report(&timer) == TIMER_WORKING);
-    uint16_t range_3 = rangefinder_get_range();
+    uint16_t range_1 = rangefinder_do();
+    uint16_t range_2 = rangefinder_do();
+    uint16_t range_3 = rangefinder_do();
     
     if (range_1 >= range_2)
     {

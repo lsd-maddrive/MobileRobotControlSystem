@@ -19,7 +19,7 @@
 #include "timer.h"
 
 static uint32_t range;
-static Timer timerForPulse; 
+static Timer timer; 
 
 
 /*
@@ -28,10 +28,22 @@ static Timer timerForPulse;
 void rangefinder_init()
 {
     rangefinder_init_interrupt();
-    soft_timer_init(&timerForPulse);
+    soft_timer_init(&timer);
     range = 0;
 }
 
+
+/*
+* @brief Выполнить измерение расстояния
+* @note Подать импульс, подождать, получить импульс, вернуть расстояние (в см)
+*/
+uint16_t rangefinder_do()
+{
+    rangefinder_give_impulse();
+    timer_start_ms(&timer, 100);
+    while(timer_report(&timer) == TIMER_WORKING);
+    return rangefinder_get_range();
+}
 
 /*
 * @brief Подать импульс на датчик длительностью минимум 10 мс
@@ -40,13 +52,13 @@ void rangefinder_give_impulse()
 {
     // Заблаговременно устанавливаем ножку в 0
     RANGEFINDER_OUTPUT = 0;
-    timer_start_us(&timerForPulse, 5);
-    while(timer_report(&timerForPulse) == TIMER_WORKING);
+    timer_start_us(&timer, 5);
+    while(timer_report(&timer) == TIMER_WORKING);
     
     // Подаем импульс 10 мкс
     RANGEFINDER_OUTPUT = 1;
-    timer_start_us(&timerForPulse, 10);
-    while(timer_report(&timerForPulse) == TIMER_WORKING);
+    timer_start_us(&timer, 10);
+    while(timer_report(&timer) == TIMER_WORKING);
     RANGEFINDER_OUTPUT = 0;
 }
 
