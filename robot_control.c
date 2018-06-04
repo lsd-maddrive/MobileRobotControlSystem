@@ -35,8 +35,8 @@
 
 enum Initial_data
 {
-    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости см/сек
-    ROBOT_START_MAX_SPEED = 50,     // Исходное значение максимальной скорости см/сек
+    ROBOT_START_MIN_SPEED = 40,     // Исходное значение минимальной скорости см/сек
+    ROBOT_START_MAX_SPEED = 60,     // Исходное значение максимальной скорости см/сек
     ROBOT_START_ACCELERATION = 8,   // Исходное значение ускорения см/сек^2
     ROBOT_START_DECELERATION = 8,   // Исходное значение замедления см/сек^2
 };
@@ -61,13 +61,15 @@ typedef enum
 enum Calibration
 {
     // Характеристики робота:
-    ROBOT_WIDTH = 300,  // 30 см
-    ROBOT_LENGTH = 400,  // 40 см
+    ROBOT_WIDTH = 28,           // 28 см
+    ROBOT_LENGTH = 28,          // 28 см
+    ROBOT_RADIUS = 20,          // 20 см
+    ROBOT_SAFETY_CORRIDOR = 30, // 30 см
     ROBOT_HALF_WIDTH = ROBOT_WIDTH >> 1,
     ROBOT_HALF_LENGTH = ROBOT_LENGTH >> 1,
     // Характеристики энкодера:
-    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 690,
-    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 690,
+    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 735,
+    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 730,
     PULSES_IN_CM = 9, // в теории (если коэф. сцепления = 1) = 5.79, на практике хорошо будет 8.5
     // Характеристики дальномера:
     RANGEFINDER_ANGLE = 15,
@@ -87,8 +89,8 @@ enum
     NUMBER_OF_MEASUREMENTS_LEFT = 10,           // [-MAX : ITER : 0] = 45/5 + 1
     NUMBER_OF_MEASUREMENTS_RIGHT = 10,          // [0 : ITER : +MAX] = 45/5 + 1
     
-    RADIUS_OF_OBSTACLE_SEARCH = 40,            // 60 см
-    RADIUS_OF_MOVEMENT = 20,                   // 40 см
+    RADIUS_OF_OBSTACLE_SEARCH = 40,             // 60 см
+    RADIUS_OF_MOVEMENT = 20,                    // 40 см
 };
 
 typedef struct 
@@ -121,6 +123,8 @@ static Target_point target =
 {
     .x = 0, .y = 0
 };
+static uint8_t distanceToSafetyCorridor[NUMBER_OF_MEASUREMENTS_LEFT] = 
+{29, 33, 39, 46, 57, 74, 102, 159, 255, 255};
 /************************* GLOBAL AND STATIC VARIABLES ************************/
 
 
@@ -274,15 +278,17 @@ Result_of_scan_t where_is_there_obstacle()
     
     for(count = NUMBER_OF_MEASUREMENTS_LEFT; count > 0; count--)
     {
-        if( *(--ptrArrLeft) > RADIUS_OF_OBSTACLE_SEARCH)
+        if( ( *(--ptrArrLeft) < distanceToSafetyCorridor[count] ) &&
+            ( *ptrArrLeft < RADIUS_OF_OBSTACLE_SEARCH ) )
         {
             maxCount = -count;
             break;
         }
     }
-    for(count = NUMBER_OF_MEASUREMENTS_RIGHT; count > 0; count--)
+    for(count = NUMBER_OF_MEASUREMENTS_RIGHT; count > maxCount; count--)
     {
-        if( *(--ptrArrRight) > RADIUS_OF_OBSTACLE_SEARCH)
+        if( ( *(--ptrArrRight) < distanceToSafetyCorridor[count] ) &&
+            ( *ptrArrRight < RADIUS_OF_OBSTACLE_SEARCH ) )
         {
             maxCount = count;
             break;
@@ -445,8 +451,8 @@ void PI_regulator()
     const float I_REGULATOR = 1;
     
     // Основной алгоритм:
-    int16_t leftPulses = encoder_left_get_pulses();
-    int16_t rightPulses = encoder_right_get_pulses();
+    int16_t leftPulses = abs_16( encoder_left_get_pulses() );
+    int16_t rightPulses = abs_16( encoder_right_get_pulses() );
     static float integralComponent = 0;
     
     if( leftPulses > (rightPulses + PULSES_HYSTERESIS) )
@@ -476,7 +482,7 @@ void update_robot_speed(Movement_t type)
         actualSpeed = robot.maxSpeed;
     else if(actualSpeed < 0)
         actualSpeed = 0;   
-    if ( (type == MOVE_FORWARD) && (type == ROTATE_CLOCKWISE) )
+    if ( (type == MOVE_FORWARD) || (type == ROTATE_CLOCKWISE) )
         motor_set_power(actualSpeed,  MOTOR_LEFT);
     else
         motor_set_power(-actualSpeed,  MOTOR_LEFT);
@@ -486,7 +492,7 @@ void update_robot_speed(Movement_t type)
         actualSpeed = robot.maxSpeed;
     else if(actualSpeed < 0)
         actualSpeed = 0; 
-    if ( (type == MOVE_FORWARD) && (type == ROTATE_COUNTER_CLOCKWISE) )
+    if ( (type == MOVE_FORWARD) || (type == ROTATE_COUNTER_CLOCKWISE) )
         motor_set_power(actualSpeed, MOTOR_RIGHT);
     else
         motor_set_power(-actualSpeed, MOTOR_RIGHT);
@@ -722,6 +728,7 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
         }
         else
         {
+            turn_around_by(45);
             if (distance < RADIUS_OF_MOVEMENT)
                 move_forward(distance);
             else
@@ -738,7 +745,7 @@ void log_transmit()
     char buf[12];
     UART_write_string(debug, "\nlog:");
     
-    uint8_t count;
+    int8_t count;
     for(count = NUMBER_OF_MEASUREMENTS_LEFT-1; count >= 0; count--)
     {
         num2str(arrRangesLeft[count], buf);

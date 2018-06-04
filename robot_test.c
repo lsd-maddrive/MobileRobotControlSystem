@@ -141,11 +141,37 @@ void test_rangefinder()
 void test_turn_around_by()
 {
     turn_around_by(360);
-    timer_start_ms(&timer, 2000);
+    timer_start_ms(&timer, 3000);
     while(timer_report(&timer) == TIMER_WORKING);
     
     turn_around_by(-360);
-    timer_start_ms(&timer, 2000);
+    timer_start_ms(&timer, 3000);
+    while(timer_report(&timer) == TIMER_WORKING);
+    
+    turn_around_by(-90);
+    timer_start_ms(&timer, 500);
+    while(timer_report(&timer) == TIMER_WORKING);
+    turn_around_by(-90);
+    timer_start_ms(&timer, 500);
+    while(timer_report(&timer) == TIMER_WORKING);
+    turn_around_by(+90);
+    timer_start_ms(&timer, 500);
+    while(timer_report(&timer) == TIMER_WORKING);
+    turn_around_by(+90);
+    timer_start_ms(&timer, 3000);
+    while(timer_report(&timer) == TIMER_WORKING);
+    
+    turn_around_by(+90);
+    timer_start_ms(&timer, 500);
+    while(timer_report(&timer) == TIMER_WORKING);
+    turn_around_by(+90);
+    timer_start_ms(&timer, 500);
+    while(timer_report(&timer) == TIMER_WORKING);
+    turn_around_by(-90);
+    timer_start_ms(&timer, 500);
+    while(timer_report(&timer) == TIMER_WORKING);
+    turn_around_by(-90);
+    timer_start_ms(&timer, 3000);
     while(timer_report(&timer) == TIMER_WORKING);
 }
 
@@ -164,6 +190,7 @@ void test_move_to()
     move_to(-10, 10);
     move_to(0, 10);
     move_to(0, 0);
+    turn_around_to(0);
 }
 
 void test_measure()
