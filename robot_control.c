@@ -36,10 +36,10 @@
 
 enum Initial_data
 {
-    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости см/сек
-    ROBOT_START_MAX_SPEED = 70,     // Исходное значение максимальной скорости см/сек
-    ROBOT_START_ACCELERATION = 64,   // Исходное значение ускорения см/сек^2
-    ROBOT_START_DECELERATION = 64,   // Исходное значение замедления см/сек^2
+    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости, duty_cycle
+    ROBOT_START_MAX_SPEED = 70,     // Исходное значение максимальной скорости, duty_cycle
+    ROBOT_START_ACCELERATION = 2,   // Исходное значение ускорения duty_cycle/(50мс)
+    ROBOT_START_DECELERATION = 2,   // Исходное значение замедления duty_cycle/(50мс)
 };
 
 
@@ -377,8 +377,8 @@ uint8_t smooth_increase_current_speed()
     {
         if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
         {
-            timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
-            robot.currentSpeed += (robot.acceleration >> 3);
+            timer_start_ms(&timerForSmoothChangeSpeedDelay, 50);
+            robot.currentSpeed += robot.acceleration;
         }
     }
     else
@@ -398,8 +398,8 @@ void smooth_decrease_current_speed()
     {
         if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
         {
-            timer_start_ms(&timerForSmoothChangeSpeedDelay, 100);
-            robot.currentSpeed -= (robot.deceleration >> 3);
+            timer_start_ms(&timerForSmoothChangeSpeedDelay, 50);
+            robot.currentSpeed -= robot.deceleration;
         }
     }
 }
