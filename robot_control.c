@@ -36,10 +36,10 @@
 
 enum Initial_data
 {
-    ROBOT_START_MIN_SPEED = 40,     // Исходное значение минимальной скорости см/сек
-    ROBOT_START_MAX_SPEED = 60,     // Исходное значение максимальной скорости см/сек
-    ROBOT_START_ACCELERATION = 8,   // Исходное значение ускорения см/сек^2
-    ROBOT_START_DECELERATION = 8,   // Исходное значение замедления см/сек^2
+    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости см/сек
+    ROBOT_START_MAX_SPEED = 70,     // Исходное значение максимальной скорости см/сек
+    ROBOT_START_ACCELERATION = 64,   // Исходное значение ускорения см/сек^2
+    ROBOT_START_DECELERATION = 64,   // Исходное значение замедления см/сек^2
 };
 
 
@@ -69,8 +69,8 @@ enum Calibration
     ROBOT_EXTERNAL_DIAMETER = 40,
     ROBOT_SAFETY_CORRIDOR_DIAMETER = 60,
     // Характеристики энкодера:
-    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 735,
-    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 730,
+    PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 720,
+    PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 720,
     PULSES_IN_CM = 9, // в теории (если коэф. сцепления = 1) = 5.79, на практике хорошо будет 8.5
     // Характеристики дальномера:
     RANGEFINDER_ANGLE = 15,
@@ -456,7 +456,7 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
         {
             case ROBOT_ACCELERATION_STOP:
             {
-                uint32_t timeOfDeadZone = timer_get_elapsed_time(&timerForSmoothChangeSpeedDeadZone)/1000;
+                uint32_t timeOfDeadZone = timer_get_elapsed_time(&timerForSmoothChangeSpeedDeadZone)*0.001;
                 timer_start_ms(&timerForSmoothChangeSpeedDeadZone, timeOfDeadZone);
                 statusOfChange = ROBOT_DECELERATION_STOP;
                 break;
@@ -492,7 +492,7 @@ void PI_regulator()
 {
     // Константы, полученные эмпирическим путем:
     const uint8_t PULSES_HYSTERESIS = 0;
-    const float P_REGULATOR = 2;
+    const float P_REGULATOR = 1;
     const float I_REGULATOR = 1;
     
     // Основной алгоритм:
@@ -522,15 +522,77 @@ void PI_regulator()
  */
 void update_robot_speed(Movement_t type)
 {
+    //#define TEST_MODE
+    //#define TEST_ENCODER_VALUE
+    //#define TEST_SMOOTH_SPEED_CURRENT_SPEED
+    //#define TEST_PI_REGULATOR_ACTUAL_SPEED
+    //#define TEST_PI_REGULATOR_STOP
+
+    #ifdef TEST_MODE
+    static uint32_t countTest = 0;
+    countTest++;
+    #endif
+    
+    #ifdef TEST_ENCODER_VALUE
+    if(countTest%255 == 0)
+    {
+        {
+            char buffer[12];
+            num2str(encoder_left_get_pulses(), buffer); 
+            UART_write_string(debug, buffer);
+            UART_write_string(debug, " ");
+        }
+        {
+            char buffer[12];
+            num2str(encoder_right_get_pulses(), buffer); 
+            UART_write_string(debug, buffer);
+            UART_write_string(debug, " ");
+        }
+    }
+    #endif
+
+    #ifdef TEST_SMOOTH_SPEED_CURRENT_SPEED
+    if(countTest%255 == 0)
+    {
+        char buffer[12];
+        num2str(robot.currentSpeed, buffer); 
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, " ");
+    }
+    #endif
     int8_t actualSpeed = robot.currentSpeed - robot.speedRegulator;
     if(actualSpeed > robot.maxSpeed)
         actualSpeed = robot.maxSpeed;
     else if(actualSpeed < 0)
-        actualSpeed = 0;   
+        actualSpeed = 0; 
+    
+    #ifdef TEST_PI_REGULATOR_STOP
+    if(countTest > 70*255)
+        actualSpeed = 0;
+    #endif
+
     if ( (type == MOVE_FORWARD) || (type == ROTATE_CLOCKWISE) )
         motor_set_power(actualSpeed,  MOTOR_LEFT);
     else
         motor_set_power(-actualSpeed,  MOTOR_LEFT);
+    
+    #ifdef TEST_PI_REGULATOR_ACTUAL_SPEED
+    if(countTest%255 == 0)
+    {
+        {
+            char buffer[12] = {0};
+            num2str(actualSpeed, buffer); 
+            UART_write_string(debug, buffer);
+            UART_write_string(debug, " ");
+        }
+        {
+            char buffer[12] = {0};
+            num2str(robot.speedRegulator, buffer); 
+            UART_write_string(debug, buffer);
+            UART_write_string(debug, " ");
+        }
+    }
+    #endif
     
     actualSpeed = robot.currentSpeed + robot.speedRegulator;
     if(actualSpeed > robot.maxSpeed)
@@ -541,6 +603,23 @@ void update_robot_speed(Movement_t type)
         motor_set_power(actualSpeed, MOTOR_RIGHT);
     else
         motor_set_power(-actualSpeed, MOTOR_RIGHT);
+    
+    #ifdef TEST_PI_REGULATOR_ACTUAL_SPEED
+    if(count == 255)
+    {
+        char buffer[12] = {0};
+        num2str(actualSpeed, buffer); 
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, " ");
+    }
+    #endif
+
+    #ifdef TEST_MODE
+    if(countTest%255 == 0)
+    {
+        UART_write_string(debug, "; ");
+    }
+    #endif
 }
 
 

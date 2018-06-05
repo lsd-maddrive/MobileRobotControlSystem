@@ -54,7 +54,10 @@ int main(void)
     soft_timer_init(&logPeriod);
     //test_turn_around_by();        // успешно работает
     //test_move_to();               // успешно работает
-    //test_measure();               // вроде работает
+    //test_measure();               // с горем пополам работает
+    //move_forward(50);             // успешно работает
+    //test_move_to();               // успешно работает
+    //move_with_obstacle_avoidance(0, 50);
     while(1)
     {
         //test_motor_control();     // успешно работает
@@ -62,17 +65,6 @@ int main(void)
         //test_software_timer();    // успешно работает
         //test_rangefinder();       // успешно работает
         //test_encoder();           // успешно работает
-        //test_turn_around_by();    // успешно работает
-        
-        static uint8_t status = 0;
-        if (status == 0)
-        {
-            status = 1;
-            //move_forward(50);     // успешно работает
-            //test_move_to();       // ???
-            //test_measure();
-            //move_with_obstacle_avoidance(0, 50);
-        }
         
         if(timer_report(&logPeriod) != TIMER_WORKING)
         {
