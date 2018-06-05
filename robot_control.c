@@ -31,6 +31,7 @@
 #include "robot_control.h"
 #include "math.h"
 #include "text.h"
+#include "robot_test.h"
 #include "string.h" // для memcpy
 
 enum Initial_data
@@ -60,13 +61,13 @@ typedef enum
 
 enum Calibration
 {
-    // Характеристики робота:
-    ROBOT_WIDTH = 28,           // 28 см
-    ROBOT_LENGTH = 28,          // 28 см
-    ROBOT_RADIUS = 20,          // 20 см
-    ROBOT_SAFETY_CORRIDOR = 30, // 30 см
-    ROBOT_HALF_WIDTH = ROBOT_WIDTH >> 1,
-    ROBOT_HALF_LENGTH = ROBOT_LENGTH >> 1,
+    // Характеристики робота (ширина 28, длина 28):
+    ROBOT_INTERNAL_RADIUS = 14,
+    ROBOT_EXTERNAL_RADIUS = 20,
+    ROBOT_SAFETY_CORRIDOR_RADIUS = 30,
+    ROBOT_INTERNAL_DIAMETER = 28,
+    ROBOT_EXTERNAL_DIAMETER = 40,
+    ROBOT_SAFETY_CORRIDOR_DIAMETER = 60,
     // Характеристики энкодера:
     PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 735,
     PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 730,
@@ -84,6 +85,7 @@ enum
 {
     MAX_ANGLE_OF_ROTATION_WHEN_MEASURE = 45,    // 45 градусов
     ANGLE_OF_ROTATION_WHEN_MEASURE = 5,         // 5 градусов
+    NUMBER_OF_ROTATIONS = 9,                    // 45/5
     NUMBER_OF_ROTATIONS_LEFT = 9,               // 45/5
     NUMBER_OF_ROTATIONS_RIGHT = 9,              // 45/5
     NUMBER_OF_MEASUREMENTS_LEFT = 10,           // [-MAX : ITER : 0] = 45/5 + 1
@@ -98,6 +100,13 @@ typedef struct
     int16_t x;
     int16_t y;
 } Target_point;
+
+typedef struct 
+{
+    int16_t BorderLeft;
+    int16_t BorderRight;
+    uint8_t Distance;
+} Obstacle;
 
 /************************* GLOBAL AND STATIC VARIABLES ************************/
 extern UART_module* debug;
@@ -123,8 +132,14 @@ static Target_point target =
 {
     .x = 0, .y = 0
 };
+static Obstacle obstacle =
+{
+    .BorderLeft = 0, .BorderRight = 0, .Distance = 0,
+};
 static uint8_t distanceToSafetyCorridor[NUMBER_OF_MEASUREMENTS_LEFT] = 
-{29, 33, 39, 46, 57, 74, 102, 159, 255, 255};
+{
+    29, 33, 39, 46, 57, 74, 102, 159, 255, 255
+};
 /************************* GLOBAL AND STATIC VARIABLES ************************/
 
 
@@ -253,43 +268,84 @@ void measure()
     turn_around_by(-MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
 }
 
+
+/* 
+ * @brief 
+ * @param
+ * @return
+ */
+uint8_t is_it_obstacle(uint16_t* pDist, uint8_t* pSafety)
+{
+    return ( ( *pDist < *pSafety ) && ( *pDist < RADIUS_OF_OBSTACLE_SEARCH ) );
+}
+
+
 /* 
  * @brief Анализ массива расстояний, полученных от дальномера
  * @return OBSTACLE_TO_THE_LEFT или OBSTACLE_TO_THE_RIGHT, если обнаружено препятствие, 
    иначе SECTOR_CLEAR
  */
-Result_of_scan_t where_is_there_obstacle()
+Result_of_scan_t where_is_obstacle()
 {
-    int8_t count;
-    int16_t* ptrArrLeft = arrRangesLeft + NUMBER_OF_MEASUREMENTS_LEFT;
-    int16_t* ptrArrRight = arrRangesRight + NUMBER_OF_MEASUREMENTS_RIGHT;
-    int8_t maxCount = 0;
+    enum
+    { 
+        ZERO_OBSTACLES = 0,
+        ONE_OBSTACLE = 1,
+        SEVERAL_OBSTACLES = 2,
+        SOME_BIG_VALUE = 30000,
+    };
+    int8_t angle;
+    uint16_t* ptrArrLeft = arrRangesLeft + NUMBER_OF_ROTATIONS_LEFT;      
+    uint16_t* ptrArrRight = arrRangesRight + NUMBER_OF_ROTATIONS_RIGHT;
+    uint8_t* prtDistance = distanceToSafetyCorridor;
+    uint8_t numberOfObstacles = 0; 
+    obstacle.BorderLeft = SOME_BIG_VALUE;
+    obstacle.BorderRight = -SOME_BIG_VALUE;
     
-    for(count = NUMBER_OF_MEASUREMENTS_LEFT; count > 0; count--)
+    for(angle = -MAX_ANGLE_OF_ROTATION_WHEN_MEASURE; angle >= 0; angle-=5)
     {
-        if( ( *(--ptrArrLeft) < distanceToSafetyCorridor[count] ) &&
-            ( *ptrArrLeft < RADIUS_OF_OBSTACLE_SEARCH ) )
+        if( is_it_obstacle(ptrArrLeft--, prtDistance++ ) && numberOfObstacles == ZERO_OBSTACLES)
         {
-            maxCount = -count;
-            break;
+            numberOfObstacles = ONE_OBSTACLE;
+            obstacle.BorderLeft = ( *ptrArrLeft + ROBOT_INTERNAL_RADIUS )*sin(angle);
+        }
+        else if( !is_it_obstacle(ptrArrLeft, prtDistance ) && numberOfObstacles == ONE_OBSTACLE)
+        {
+            numberOfObstacles = SEVERAL_OBSTACLES;
+            obstacle.BorderRight = ( *ptrArrLeft + ROBOT_INTERNAL_RADIUS )*sin(angle);
+        }
+        else if( is_it_obstacle(ptrArrLeft, prtDistance ) && numberOfObstacles == SEVERAL_OBSTACLES)
+        {
+            obstacle.BorderRight = ( *ptrArrLeft + ROBOT_INTERNAL_RADIUS )*sin(angle);
         }
     }
-    for(count = NUMBER_OF_MEASUREMENTS_RIGHT; count > maxCount; count--)
+    for(angle = 0; angle < MAX_ANGLE_OF_ROTATION_WHEN_MEASURE; angle+=5)
     {
-        if( ( *(--ptrArrRight) < distanceToSafetyCorridor[count] ) &&
-            ( *ptrArrRight < RADIUS_OF_OBSTACLE_SEARCH ) )
+        if( is_it_obstacle(ptrArrRight--, prtDistance++ ) && numberOfObstacles == ZERO_OBSTACLES)
         {
-            maxCount = count;
-            break;
+            numberOfObstacles = ONE_OBSTACLE;
+            obstacle.BorderLeft = ( *ptrArrRight + ROBOT_INTERNAL_RADIUS )*sin(angle);
+        }
+        else if( !is_it_obstacle(ptrArrRight, prtDistance ) && numberOfObstacles == ONE_OBSTACLE)
+        {
+            numberOfObstacles = SEVERAL_OBSTACLES;
+            obstacle.BorderRight = ( *ptrArrRight + ROBOT_INTERNAL_RADIUS )*sin(angle);
+        }
+        else if( is_it_obstacle(ptrArrLeft, prtDistance ) && numberOfObstacles == SEVERAL_OBSTACLES)
+        {
+            obstacle.BorderRight = ( *ptrArrRight + ROBOT_INTERNAL_RADIUS )*sin(angle);
         }
     }
     
-    if(count < 0)
+    //obstacle.Distance = sqrt();
+    
+    if( abs(obstacle.BorderLeft) > abs(obstacle.BorderRight) )
         return OBSTACLE_TO_THE_LEFT;
-    else if (count > 0)
+    else if ( abs(obstacle.BorderLeft) < abs(obstacle.BorderRight) )
         return OBSTACLE_TO_THE_RIGHT; 
     return SECTOR_CLEAR;
 }
+
 
 /* 
  * @brief Проверка на совпадение координат робота и цели
@@ -385,7 +441,7 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
         {
             if (smooth_increase_current_speed() )
             {
-                statusOfChange == ROBOT_ACCELERATION_STOP;
+                statusOfChange = ROBOT_ACCELERATION_STOP;
                 timer_start_ms(&timerForSmoothChangeSpeedDeadZone, 30000);
             }
         }  
@@ -402,13 +458,13 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
             {
                 uint32_t timeOfDeadZone = timer_get_elapsed_time(&timerForSmoothChangeSpeedDeadZone)/1000;
                 timer_start_ms(&timerForSmoothChangeSpeedDeadZone, timeOfDeadZone);
-                statusOfChange == ROBOT_DECELERATION_STOP;
+                statusOfChange = ROBOT_DECELERATION_STOP;
                 break;
             }
             case ROBOT_DECELERATION_STOP:
             {
                 if( timer_report(&timerForSmoothChangeSpeedDeadZone) != TIMER_WORKING)
-                    statusOfChange == ROBOT_DECELERATION_PROCESS;
+                    statusOfChange = ROBOT_DECELERATION_PROCESS;
                 break;
             }
             case ROBOT_DECELERATION_PROCESS:
@@ -685,36 +741,39 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
         measure_left();
         log_transmit();
         
-        if( where_is_there_obstacle() == OBSTACLE_TO_THE_LEFT )
+        // Объезжаем препятствие справа
+        if( where_is_obstacle() == OBSTACLE_TO_THE_LEFT )
         {
             turn_around_by(+135);
 
             test_measure(); //measure();
             
-            if( where_is_there_obstacle() != SECTOR_CLEAR)
+            if( where_is_obstacle() != SECTOR_CLEAR)
                 break;
             else
             {
-                move_forward(RADIUS_OF_MOVEMENT << 1);
+                move_forward(ROBOT_SAFETY_CORRIDOR_RADIUS - obstacle.BorderRight);
                 turn_around_by(-90);
                 move_forward(RADIUS_OF_MOVEMENT << 1);
             }
         }
-        else if( where_is_there_obstacle() == OBSTACLE_TO_THE_RIGHT )
+        // Объезжаем препятствие слева
+        else if( where_is_obstacle() == OBSTACLE_TO_THE_RIGHT )
         {
             turn_around_by(-45);
 
             test_measure(); //measure();
             
-            if( where_is_there_obstacle() != SECTOR_CLEAR)
+            if( where_is_obstacle() != SECTOR_CLEAR)
                 break;
             else
             {
-                move_forward(RADIUS_OF_MOVEMENT << 1);
+                move_forward(ROBOT_SAFETY_CORRIDOR_RADIUS - obstacle.BorderLeft);
                 turn_around_by(+90);
                 move_forward(RADIUS_OF_MOVEMENT << 1);
             }
         }
+        // Едем прямо
         else
         {
             turn_around_by(45);
