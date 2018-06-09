@@ -288,61 +288,75 @@ uint8_t is_it_obstacle(uint16_t* pDist, uint8_t* pSafety)
 Result_of_scan_t where_is_obstacle()
 {
     enum
-    { 
+    {
         ZERO_OBSTACLES = 0,
         ONE_OBSTACLE = 1,
         SEVERAL_OBSTACLES = 2,
-        SOME_BIG_VALUE = 30000,
+        SOME_BIG_VALUE = 50,
     };
     int8_t angle;
-    uint16_t* ptrArrLeft = arrRangesLeft + NUMBER_OF_ROTATIONS_LEFT;      
-    uint16_t* ptrArrRight = arrRangesRight + NUMBER_OF_ROTATIONS_RIGHT;
-    uint8_t* prtDistance = distanceToSafetyCorridor;
-    uint8_t numberOfObstacles = 0; 
+    uint16_t* ptrArrLeft = arrRangesLeft + NUMBER_OF_MEASUREMENTS_LEFT;
+    uint16_t* ptrArrRight = arrRangesRight;
+    uint8_t* ptrDistance = distanceToSafetyCorridor;
+    uint8_t numberOfObstacles = 0;
     obstacle.BorderLeft = SOME_BIG_VALUE;
     obstacle.BorderRight = -SOME_BIG_VALUE;
-    
-    for(angle = -MAX_ANGLE_OF_ROTATION_WHEN_MEASURE; angle >= 0; angle-=5)
+
+    for(angle = -MAX_ANGLE_OF_ROTATION_WHEN_MEASURE; angle <= 0; angle+=5)
     {
-        if( is_it_obstacle(ptrArrLeft--, prtDistance++ ) && numberOfObstacles == ZERO_OBSTACLES)
+        if( is_it_obstacle(--ptrArrLeft, ptrDistance ) && (numberOfObstacles == ZERO_OBSTACLES) )
         {
             numberOfObstacles = ONE_OBSTACLE;
-            obstacle.BorderLeft = ( *ptrArrLeft + ROBOT_INTERNAL_RADIUS )*sin(angle);
+            obstacle.BorderLeft = angle;
         }
-        else if( !is_it_obstacle(ptrArrLeft, prtDistance ) && numberOfObstacles == ONE_OBSTACLE)
+        else if( !is_it_obstacle(ptrArrLeft, ptrDistance ) && (numberOfObstacles == ONE_OBSTACLE) )
         {
             numberOfObstacles = SEVERAL_OBSTACLES;
-            obstacle.BorderRight = ( *ptrArrLeft + ROBOT_INTERNAL_RADIUS )*sin(angle);
+            obstacle.BorderRight = angle;
         }
-        else if( is_it_obstacle(ptrArrLeft, prtDistance ) && numberOfObstacles == SEVERAL_OBSTACLES)
+        else if( is_it_obstacle(ptrArrLeft, ptrDistance ) && (numberOfObstacles == SEVERAL_OBSTACLES) )
         {
-            obstacle.BorderRight = ( *ptrArrLeft + ROBOT_INTERNAL_RADIUS )*sin(angle);
+            obstacle.BorderRight = angle;
         }
+        ptrDistance++;
     }
+    ptrDistance = distanceToSafetyCorridor + NUMBER_OF_ROTATIONS;
     for(angle = 0; angle < MAX_ANGLE_OF_ROTATION_WHEN_MEASURE; angle+=5)
     {
-        if( is_it_obstacle(ptrArrRight--, prtDistance++ ) && numberOfObstacles == ZERO_OBSTACLES)
+        if( is_it_obstacle(ptrArrRight, --ptrDistance ) && (numberOfObstacles == ZERO_OBSTACLES) )
         {
             numberOfObstacles = ONE_OBSTACLE;
-            obstacle.BorderLeft = ( *ptrArrRight + ROBOT_INTERNAL_RADIUS )*sin(angle);
+            obstacle.BorderLeft = angle;
         }
-        else if( !is_it_obstacle(ptrArrRight, prtDistance ) && numberOfObstacles == ONE_OBSTACLE)
+        else if( !is_it_obstacle(ptrArrRight, ptrDistance ) && (numberOfObstacles == ONE_OBSTACLE) )
         {
             numberOfObstacles = SEVERAL_OBSTACLES;
-            obstacle.BorderRight = ( *ptrArrRight + ROBOT_INTERNAL_RADIUS )*sin(angle);
+            obstacle.BorderRight = angle;
         }
-        else if( is_it_obstacle(ptrArrLeft, prtDistance ) && numberOfObstacles == SEVERAL_OBSTACLES)
+        else if( is_it_obstacle(ptrArrLeft, ptrDistance ) && (numberOfObstacles == SEVERAL_OBSTACLES) )
         {
-            obstacle.BorderRight = ( *ptrArrRight + ROBOT_INTERNAL_RADIUS )*sin(angle);
+            obstacle.BorderRight = angle;
         }
+        ptrArrRight++;
     }
-    
+
     //obstacle.Distance = sqrt();
-    
+
+    if( obstacle.BorderLeft <= 0 )
+        obstacle.BorderLeft = (arrRangesLeft[(uint8_t)(obstacle.BorderLeft*(-0.2))])*sin(obstacle.BorderLeft);
+    else
+        obstacle.BorderLeft = (arrRangesLeft[(uint8_t)(obstacle.BorderRight*(0.2))])*sin(obstacle.BorderLeft);
+
+    if( obstacle.BorderRight >= 0 )
+        obstacle.BorderRight = (arrRangesLeft[9-(uint8_t)(obstacle.BorderRight*0.2)])*sin(obstacle.BorderRight);
+    else
+        obstacle.BorderRight = (arrRangesLeft[(uint8_t)(obstacle.BorderLeft*(-0.2))])*sin(obstacle.BorderRight);
+
+
     if( abs(obstacle.BorderLeft) > abs(obstacle.BorderRight) )
         return OBSTACLE_TO_THE_LEFT;
     else if ( abs(obstacle.BorderLeft) < abs(obstacle.BorderRight) )
-        return OBSTACLE_TO_THE_RIGHT; 
+        return OBSTACLE_TO_THE_RIGHT;
     return SECTOR_CLEAR;
 }
 
@@ -823,6 +837,8 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
         // Объезжаем препятствие справа
         if( where_is_obstacle() == OBSTACLE_TO_THE_LEFT )
         {
+            //uint16_t borderLeft = obstacle.BorderLeft;
+            uint16_t borderRight = obstacle.BorderRight;
             turn_around_by(+135);
 
             test_measure(); //measure();
@@ -831,7 +847,14 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
                 break;
             else
             {
-                move_forward(ROBOT_SAFETY_CORRIDOR_RADIUS - obstacle.BorderRight);
+                
+                char buf[12] = {};
+                num2str(borderRight, buf);
+                UART_write_string(debug, " %");
+                UART_write_string(debug, buf);
+                UART_write_string(debug, "% ");
+                
+                move_forward(ROBOT_SAFETY_CORRIDOR_RADIUS + borderRight);
                 turn_around_by(-90);
                 move_forward(RADIUS_OF_MOVEMENT << 1);
             }
@@ -839,6 +862,8 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
         // Объезжаем препятствие слева
         else if( where_is_obstacle() == OBSTACLE_TO_THE_RIGHT )
         {
+            uint16_t borderLeft = obstacle.BorderLeft;
+            //uint16_t borderRight = obstacle.BorderRight;
             turn_around_by(-45);
 
             test_measure(); //measure();
@@ -847,7 +872,13 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
                 break;
             else
             {
-                move_forward(ROBOT_SAFETY_CORRIDOR_RADIUS - obstacle.BorderLeft);
+                char buf[12] = {};
+                num2str(borderLeft, buf);
+                UART_write_string(debug, " %");
+                UART_write_string(debug, buf);
+                UART_write_string(debug, "% ");
+                
+                move_forward(ROBOT_SAFETY_CORRIDOR_RADIUS - borderLeft);
                 turn_around_by(+90);
                 move_forward(RADIUS_OF_MOVEMENT << 1);
             }
