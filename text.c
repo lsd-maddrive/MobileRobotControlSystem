@@ -21,14 +21,23 @@ void num2str(int32_t num, char* str)
         num = -num;
         *str++ = '-';
     }
-    while(1)
+    if (num == 0)
     {
-        if (num == 0)
-            break;
-        str[count++] = '0' + num%10;
-        num /= 10;
+        str[0] = '0';
+        str[1] = '\0';
     }
-    str[count] = '\0';
+    else
+    {
+        while(1)
+        {
+           if (num == 0)
+              break;
+          str[count++] = '0' + num%10;
+          num /= 10;
+        }
+        str[count] = '\0';
+    
+    }
     
     // Перестановка строки:
     uint8_t length = count;
