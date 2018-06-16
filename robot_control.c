@@ -38,8 +38,8 @@ enum Initial_data
 {
     ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости, duty_cycle
     ROBOT_START_MAX_SPEED = 70,     // Исходное значение максимальной скорости, duty_cycle
-    ROBOT_START_ACCELERATION = 2,   // Исходное значение ускорения duty_cycle/(50мс)
-    ROBOT_START_DECELERATION = 2,   // Исходное значение замедления duty_cycle/(50мс)
+    ROBOT_START_ACCELERATION = 1,   // Исходное значение ускорения duty_cycle/(50мс)
+    ROBOT_START_DECELERATION = 1,   // Исходное значение замедления duty_cycle/(50мс)
 };
 
 
@@ -112,6 +112,7 @@ typedef struct
 extern UART_module* debug;
 Timer timer; 
 Timer timerSub;
+static Timer timerForTest;
 static Timer timerForSmoothChangeSpeedDelay;
 static Timer timerForSmoothChangeSpeedDeadZone;
 static uint16_t arrRangesLeft[NUMBER_OF_MEASUREMENTS_LEFT];
@@ -536,20 +537,15 @@ void PI_regulator()
  */
 void update_robot_speed(Movement_t type)
 {
-    //#define TEST_MODE
-    //#define TEST_ENCODER_VALUE
-    //#define TEST_SMOOTH_SPEED_CURRENT_SPEED
-    //#define TEST_PI_REGULATOR_ACTUAL_SPEED
-    //#define TEST_PI_REGULATOR_STOP
+    #define TEST_MODE       // activate timer
+    #define TEST_ENCODER    // with timer
+    #define TEST_PWM        // with timer
 
     #ifdef TEST_MODE
-    static uint32_t countTest = 0;
-    countTest++;
-    #endif
-    
-    #ifdef TEST_ENCODER_VALUE
-    if(countTest%255 == 0)
+    if( timer_report(&timerForTest) != TIMER_WORKING )
     {
+        timer_start_ms(&timerForTest, 50);
+        #ifdef TEST_ENCODER
         {
             char buffer[12];
             num2str(encoder_left_get_pulses(), buffer); 
@@ -562,51 +558,29 @@ void update_robot_speed(Movement_t type)
             UART_write_string(debug, buffer);
             UART_write_string(debug, " ");
         }
-    }
-    #endif
+        #endif
+        #ifdef TEST_PWM
+        {
+            char buffer[12];
+            num2str(robot.currentSpeed, buffer); 
+            UART_write_string(debug, buffer);
+            UART_write_string(debug, " ");
+        }
+        #endif
+        UART_write_string(debug, "; ");
+    } 
+    #endif  // TEST_MODE
 
-    #ifdef TEST_SMOOTH_SPEED_CURRENT_SPEED
-    if(countTest%255 == 0)
-    {
-        char buffer[12];
-        num2str(robot.currentSpeed, buffer); 
-        UART_write_string(debug, buffer);
-        UART_write_string(debug, " ");
-    }
-    #endif
     int8_t actualSpeed = robot.currentSpeed - robot.speedRegulator;
     if(actualSpeed > robot.maxSpeed)
         actualSpeed = robot.maxSpeed;
     else if(actualSpeed < 0)
         actualSpeed = 0; 
-    
-    #ifdef TEST_PI_REGULATOR_STOP
-    if(countTest > 70*255)
-        actualSpeed = 0;
-    #endif
 
     if ( (type == MOVE_FORWARD) || (type == ROTATE_CLOCKWISE) )
         motor_set_power(actualSpeed,  MOTOR_LEFT);
     else
         motor_set_power(-actualSpeed,  MOTOR_LEFT);
-    
-    #ifdef TEST_PI_REGULATOR_ACTUAL_SPEED
-    if(countTest%255 == 0)
-    {
-        {
-            char buffer[12] = {0};
-            num2str(actualSpeed, buffer); 
-            UART_write_string(debug, buffer);
-            UART_write_string(debug, " ");
-        }
-        {
-            char buffer[12] = {0};
-            num2str(robot.speedRegulator, buffer); 
-            UART_write_string(debug, buffer);
-            UART_write_string(debug, " ");
-        }
-    }
-    #endif
     
     actualSpeed = robot.currentSpeed + robot.speedRegulator;
     if(actualSpeed > robot.maxSpeed)
@@ -617,23 +591,6 @@ void update_robot_speed(Movement_t type)
         motor_set_power(actualSpeed, MOTOR_RIGHT);
     else
         motor_set_power(-actualSpeed, MOTOR_RIGHT);
-    
-    #ifdef TEST_PI_REGULATOR_ACTUAL_SPEED
-    if(count == 255)
-    {
-        char buffer[12] = {0};
-        num2str(actualSpeed, buffer); 
-        UART_write_string(debug, buffer);
-        UART_write_string(debug, " ");
-    }
-    #endif
-
-    #ifdef TEST_MODE
-    if(countTest%255 == 0)
-    {
-        UART_write_string(debug, "; ");
-    }
-    #endif
 }
 
 
@@ -805,6 +762,7 @@ void init_periphery()
     debug = UART_init(UART_1, UART_BAUD_RATE_9600);
     hard_timer_init();
     soft_timer_init(&timer);
+    soft_timer_init(&timerForTest);
     soft_timer_init(&timerSub);
     soft_timer_init(&timerForSmoothChangeSpeedDelay);
     soft_timer_init(&timerForSmoothChangeSpeedDeadZone);

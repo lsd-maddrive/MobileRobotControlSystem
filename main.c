@@ -55,9 +55,10 @@ int main(void)
     //test_turn_around_by();        // успешно работает
     //test_move_to();               // успешно работает
     //test_measure();               // с горем пополам работает
-    //move_forward(50);             // успешно работает
+    move_forward(75);             // успешно работает
     //test_move_to();               // успешно работает
-    move_with_obstacle_avoidance(0, 50);
+    //move_with_obstacle_avoidance(0, 50);
+    //turn_around_by(360);
     while(1)
     {
         //test_motor_control();     // успешно работает
