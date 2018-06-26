@@ -66,6 +66,7 @@ int main(void)
         //test_software_timer();    // успешно работает
         //test_rangefinder();       // успешно работает
         //test_encoder();           // успешно работает
+        test_adc();
         
         if(timer_report(&logPeriod) != TIMER_WORKING)
         {

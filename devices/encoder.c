@@ -1,5 +1,5 @@
 /*
- * File:   main.c
+ * File:   encoder.c
  */
 #include "encoder.h"
 

@@ -3,6 +3,7 @@
  */
 
 #include "robot_test.h"
+#include "adc.h"
 #include "math.h"
 #include "text.h"
 
@@ -138,6 +139,9 @@ void test_rangefinder()
     while(timer_report(&timer) == TIMER_WORKING);
 }
 
+/* 
+ * @brief Тест поворота двигателя
+ */
 void test_turn_around_by()
 {
     turn_around_by(360);
@@ -176,6 +180,9 @@ void test_turn_around_by()
 }
 
 
+/* 
+ * @brief Тест движения робота к указанным координатам
+ */
 void test_move_to()
 {
     move_to(10, 0);
@@ -193,16 +200,41 @@ void test_move_to()
     turn_around_to(0);
 }
 
+
+/* 
+ * @brief Тест сканирования пространства
+ */
 void test_measure()
 {
     measure();
     log_transmit();
 }
 
+
+/* 
+ * @brief Тест плавного изменения скорости
+ */
 void test_smooth_change_speed()
 {
     robot.minSpeed = 25;
     robot.maxSpeed = 60;
     turn_around_by(360);
     turn_around_by(-360);
+}
+
+
+/* 
+ * @brief Тест работы ацп
+ */
+void test_adc()
+{
+    if (timer_report(&timer) != TIMER_WORKING)
+    {
+        char buffer[12];
+        num2str(adc_read(), buffer); 
+        UART_write_string(debug, buffer);
+        UART_write_string(debug, ", ");
+    
+        timer_start_ms(&timer, 50);
+    }
 }

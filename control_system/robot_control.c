@@ -29,6 +29,7 @@
  */
 
 #include "robot_control.h"
+#include "adc.h"
 #include "math.h"
 #include "text.h"
 #include "robot_test.h"
@@ -537,9 +538,9 @@ void PI_regulator()
  */
 void update_robot_speed(Movement_t type)
 {
-    #define TEST_MODE       // activate timer
-    #define TEST_ENCODER    // with timer
-    #define TEST_PWM        // with timer
+    //#define TEST_MODE       // activate timer
+    //#define TEST_ENCODER    // with timer
+    //#define TEST_PWM        // with timer
 
     #ifdef TEST_MODE
     if( timer_report(&timerForTest) != TIMER_WORKING )
@@ -723,9 +724,10 @@ void move_forward(uint16_t distance)
         passive_obstacle_check();
         active_obstacle_check(&distance);
         smooth_change_current_speed(nowPulses, needPulses);
-        PI_regulator();
+        //PI_regulator();
         update_robot_speed(MOVE_FORWARD);
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
+        test_adc();
     }
     
     robot.currentSpeed = 0;
@@ -757,6 +759,7 @@ void move_to(int16_t x, int16_t y)
 void init_periphery() 
 {
     GPIO_init();
+    adc_init(16);
     motor_init();
     encoders_init();
     debug = UART_init(UART_1, UART_BAUD_RATE_9600);
