@@ -5,6 +5,7 @@
 
 #include "pid_regulator.h"
 #include "encoder.h"
+#include "math.h"
 
 /** 
 * @brief Расчет значения ПИ-регулятора.
@@ -27,8 +28,8 @@ int8_t PI_regulator()
 	
 	/// Переменные алгоритма:
     static float integralComponent = 0;
-	int16_t leftPulses = abs_16( encoder_left_get_pulses() );
-    int16_t rightPulses = abs_16( encoder_right_get_pulses() );
+	int16_t leftPulses = Abs_16( encoder_left_get_pulses() );
+    int16_t rightPulses = Abs_16( encoder_right_get_pulses() );
 	int16_t error = leftPulses - rightPulses;
 	int16_t result;
     

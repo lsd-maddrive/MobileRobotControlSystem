@@ -9,8 +9,8 @@
 
 
 /// Declaration of private functions:
-uint8_t smooth_increase_current_speed(uint16_t* currentSpeed);
-void smooth_decrease_current_speed(uint16_t* currentSpeed);
+uint8_t smooth_increase_current_speed(uint8_t* currentSpeed);
+void smooth_decrease_current_speed(uint8_t* currentSpeed);
 
 /// Global and static object's
 static Timer timerForSmoothChangeSpeedDelay;
@@ -55,7 +55,7 @@ void smooth_change_current_speed_init()
 * Происходит уменьшение скорости робота до значения robot.speedMin.
 * Процесс заканчивается, когда кол-во импульсов достигает необходимого.
 */
-void smooth_change_current_speed(uint16_t* currentSpeed, uint32_t nowPulses, uint32_t needPulses)
+void smooth_change_current_speed(uint8_t* currentSpeed, uint32_t nowPulses, uint32_t needPulses)
 {
     enum
     {
@@ -121,7 +121,7 @@ void smooth_change_current_speed(uint16_t* currentSpeed, uint32_t nowPulses, uin
 * @param currentSpeed - указатель на текущую скорость робота
 * @return 1, если максимальная скорость достигнута, иначе 0
 */
-uint8_t smooth_increase_current_speed(uint16_t* currentSpeed)
+uint8_t smooth_increase_current_speed(uint8_t* currentSpeed)
 {
     if (*currentSpeed < PWM_DUTY_CYCLE_MAX)
     {
@@ -143,7 +143,7 @@ uint8_t smooth_increase_current_speed(uint16_t* currentSpeed)
 * @brief Плавное уменьшение значения текущей скорости робота
 * @param currentSpeed - указатель на текущую скорость робота
 */
-void smooth_decrease_current_speed(uint16_t* currentSpeed)
+void smooth_decrease_current_speed(uint8_t* currentSpeed)
 {
     if (*currentSpeed > PWM_DUTY_CYCLE_MIN)
     {

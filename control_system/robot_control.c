@@ -152,59 +152,6 @@ static uint8_t distanceToSafetyCorridor[NUMBER_OF_MEASUREMENTS_LEFT] =
 
 
 /****************************** PRIVATE FUNCTION ******************************/
-/**
-* @brief Расчет угла поворота по длинам двух катетов
-* @param dx - катет по горизонтали
-* @param dy - катет по вертикали
-* @return angle - угол в диапазоне [-180; +180] градусов
-*/
-int16_t calculate_angle(int16_t dx, int16_t dy)
-{
-    /// Избегаем деления на ноль:
-    if (dy == 0)
-    {
-        if (dx > 0)
-        {
-            return 90;
-        }
-        else if (dx == 0)
-        {
-            return 0;
-        }
-        return -90;
-    }
-    if (dx == 0)
-    {
-        if (dy > 0)
-        {
-            return 0;
-        }
-        return 180;
-    }
-    /// Основной расчет:
-    int16_t angle = atan( abs_double((float)dx/dy) );
-    if (dx > 0 && dy < 0)       /// 4-ый квадрант
-        angle = 180 - angle;
-    else if (dx < 0 && dy < 0)  /// 3-ий квадрант
-        angle -= 180;
-    else if (dx < 0 && dy > 0)  /// 2-ой квадрант
-        angle = -angle;
-    else                        /// 1-ый квадрант
-        angle = angle;
-
-    return angle;
-}
-
-/** 
-* @brief Расчет гипатенузы по двум катетам
-* @param dx - катет по горизонтали
-* @param dy - катет по вертикали
-*/
-uint16_t calculate_distance(int16_t dx, int16_t dy)
-{
-    return sqrt(dx*dx + dy*dy);
-}
-
 /** 
 * @brief Получить медианное значение среди трех измерений дальности
 */
@@ -354,14 +301,14 @@ Result_of_scan_t where_is_obstacle()
     //obstacle.Distance = sqrt();
 
     if( obstacle.BorderLeft <= 0 )
-        obstacle.BorderLeft = (arrRangesLeft[(uint8_t)(obstacle.BorderLeft*(-0.2))])*sin(obstacle.BorderLeft);
+        obstacle.BorderLeft = (arrRangesLeft[(uint8_t)(obstacle.BorderLeft*(-0.2))])*Sin(obstacle.BorderLeft);
     else
-        obstacle.BorderLeft = (arrRangesLeft[(uint8_t)(obstacle.BorderRight*(0.2))])*sin(obstacle.BorderLeft);
+        obstacle.BorderLeft = (arrRangesLeft[(uint8_t)(obstacle.BorderRight*(0.2))])*Sin(obstacle.BorderLeft);
 
     if( obstacle.BorderRight >= 0 )
-        obstacle.BorderRight = (arrRangesLeft[9-(uint8_t)(obstacle.BorderRight*0.2)])*sin(obstacle.BorderRight);
+        obstacle.BorderRight = (arrRangesLeft[9-(uint8_t)(obstacle.BorderRight*0.2)])*Sin(obstacle.BorderRight);
     else
-        obstacle.BorderRight = (arrRangesLeft[(uint8_t)(obstacle.BorderLeft*(-0.2))])*sin(obstacle.BorderRight);
+        obstacle.BorderRight = (arrRangesLeft[(uint8_t)(obstacle.BorderLeft*(-0.2))])*Sin(obstacle.BorderRight);
 
 
     if( abs(obstacle.BorderLeft) > abs(obstacle.BorderRight) )
@@ -383,8 +330,8 @@ uint8_t is_robot_in_target()
         ALLOWABLE_FAULT = 5, ///< 5 см
     };
     int16_t dx, dy;
-    dx = abs_16( target.x - robot.x );
-    dy = abs_16( target.y - robot.y );
+    dx = Abs_16( target.x - robot.x );
+    dy = Abs_16( target.y - robot.y );
     
     if( (dx <= ALLOWABLE_FAULT) && (dy <= ALLOWABLE_FAULT) )
         return 1;
@@ -592,8 +539,8 @@ void move_forward(uint16_t distance)
     }
     
     robot.currentSpeed = 0;
-    robot.y += cos(robot.angle)*distance;
-    robot.x += sin(robot.angle)*distance;
+    robot.y += Cos(robot.angle)*distance;
+    robot.x += Sin(robot.angle)*distance;
     motors_stop();
 }
 
@@ -609,8 +556,8 @@ void move_to(int16_t x, int16_t y)
     {
         int16_t dx = (x - robot.x);
         int16_t dy = (y - robot.y);
-        turn_around_to(calculate_angle(dx, dy));
-        move_forward(calculate_distance(dx, dy));
+        turn_around_to(Calculate_angle(dx, dy));
+        move_forward(Calculate_distance(dx, dy));
     }
 }
 
@@ -647,8 +594,8 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
     {
         int16_t dx = target.x - robot.x;
         int16_t dy = target.y - robot.y;
-        uint16_t distance = calculate_distance(dx, dy);
-        turn_around_to(calculate_angle(dx, dy));
+        uint16_t distance = Calculate_distance(dx, dy);
+        turn_around_to(Calculate_angle(dx, dy));
         
         measure_right();
         turn_around_by(-MAX_ANGLE_OF_ROTATION_WHEN_MEASURE);
