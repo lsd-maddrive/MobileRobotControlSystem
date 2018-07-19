@@ -30,6 +30,7 @@
  */
 
 #include "robot_control.h"
+#include "pid_regulator.h"
 #include "adc.h"
 #include "math.h"
 #include "text.h"
@@ -509,40 +510,6 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
     }
 }
 
-/** 
-* @brief Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
-* двигателей с помощью ПИ регулятора.
-* @note Скорость левого двигателя уменьшается на robot.speedDifference.
-* @note Скорость правого двигателя увеличивается на robot.speedDifference.
-* @note Данная функция только меняет значение robot.speedDifference.
-* @note Стоит быть начеку, чтобы фактическая мощность (скажность) не превысила 100%
-*/
-void PI_regulator()
-{
-    /// Константы, полученные эмпирическим путем:
-    const uint8_t PULSES_HYSTERESIS = 0;
-    const float P_REGULATOR = 1;
-    const float I_REGULATOR = 1;
-    
-    /// Основной алгоритм:
-    int16_t leftPulses = abs_16( encoder_left_get_pulses() );
-    int16_t rightPulses = abs_16( encoder_right_get_pulses() );
-    static float integralComponent = 0;
-    
-    if( leftPulses > (rightPulses + PULSES_HYSTERESIS) )
-    {
-        if(integralComponent < (robot.maxSpeed - robot.minSpeed) )
-            integralComponent += I_REGULATOR;
-    }
-    else if( rightPulses > (leftPulses + PULSES_HYSTERESIS) )
-    {
-        if(integralComponent > ( (int8_t)robot.minSpeed - robot.maxSpeed) )
-            integralComponent -= I_REGULATOR;
-        
-    }
-    robot.speedRegulator = (leftPulses - rightPulses)*P_REGULATOR + integralComponent;
-}
-
 
 /** 
 * @brief Обновление скорости робота с учетом влияния ПИ-регулятора и плавного
@@ -663,7 +630,7 @@ void turn_around_by(int16_t angle)
         {
             update_robot_speed(ROTATE_CLOCKWISE);
             smooth_change_current_speed(nowPulses, needPulses);
-            PI_regulator();
+            robot.speedRegulator = PI_regulator();
             nowPulses = ( encoder_left_get_pulses() - encoder_right_get_pulses() ) >> 1;
         }
     }
@@ -674,7 +641,7 @@ void turn_around_by(int16_t angle)
         {
             update_robot_speed(ROTATE_COUNTER_CLOCKWISE);
             smooth_change_current_speed(nowPulses, needPulses);
-            PI_regulator();
+            robot.speedRegulator = PI_regulator();
             nowPulses = ( encoder_right_get_pulses() - encoder_left_get_pulses() ) >> 1;
         }
     }
@@ -737,7 +704,7 @@ void move_forward(uint16_t distance)
         passive_obstacle_check();
         active_obstacle_check(&distance);
         smooth_change_current_speed(nowPulses, needPulses);
-        //PI_regulator();
+        //robot.speedRegulator = PI_regulator();
         update_robot_speed(MOVE_FORWARD);
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
         test_adc();
