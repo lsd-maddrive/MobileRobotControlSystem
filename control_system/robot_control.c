@@ -153,32 +153,6 @@ static uint8_t distanceToSafetyCorridor[NUMBER_OF_MEASUREMENTS_LEFT] =
 
 /****************************** PRIVATE FUNCTION ******************************/
 /** 
-* @brief Получить медианное значение среди трех измерений дальности
-*/
-uint16_t getMedianRange()
-{
-    uint16_t range_1 = rangefinder_do();
-    uint16_t range_2 = rangefinder_do();
-    uint16_t range_3 = rangefinder_do();
-    
-    if (range_1 >= range_2)
-    {
-        if (range_1 >= range_3)
-            return (range_2 >= range_3) ? range_2 : range_3;
-        else
-            return range_1;
-    }
-    else
-    {
-        if (range_2 >= range_3)
-            return (range_1 > range_3) ? range_1 : range_3;
-    }
-        
-    return range_2;
-}
-
-
-/** 
 * @brief Определение массива показаний дальномера слева на 45 градусов от курсового угла
 * @note Обратно не поворачиваем
 */
@@ -186,11 +160,11 @@ void measure_left()
 {
     uint16_t* ptrArr = arrRangesLeft;
     uint8_t countOfRotation;
-    *(ptrArr++) = getMedianRange();
+    *(ptrArr++) = get_median_range();
     for (countOfRotation = 0; countOfRotation < NUMBER_OF_ROTATIONS_LEFT; countOfRotation++)
     {
         turn_around_by(-ANGLE_OF_ROTATION_WHEN_MEASURE);
-        *(ptrArr++) = getMedianRange();
+        *(ptrArr++) = get_median_range();
     }
 }
 
@@ -203,11 +177,11 @@ void measure_right()
 {
     uint16_t* ptrArr = arrRangesRight;
     uint8_t countOfRotation;
-    *(ptrArr++) = getMedianRange();
+    *(ptrArr++) = get_median_range();
     for (countOfRotation = 0; countOfRotation < NUMBER_OF_ROTATIONS_RIGHT; countOfRotation++)
     {
         turn_around_by(ANGLE_OF_ROTATION_WHEN_MEASURE);
-        *(ptrArr++) = getMedianRange();
+        *(ptrArr++) = get_median_range();
     }
 }
 
