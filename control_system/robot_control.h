@@ -1,6 +1,7 @@
-/* 
- * File:   robot_control.h
- */
+/**
+* @file robot_control.h
+* @brief Declaration of robot control system
+*/
 
 #ifndef ROBOT_CONTROL_H
 #define	ROBOT_CONTROL_H
@@ -38,11 +39,11 @@ typedef struct
 
 
 
-void turn_around_to(int16_t angle);     // Поворот на указанный угол
-void move_to(int16_t x, int16_t y);     // Движение к указанной координате
-void move_forward(uint16_t distance);   // Движение вперед на указанное расстояние
+void turn_around_to(int16_t angle);     /// Поворот на указанный угол
+void move_to(int16_t x, int16_t y);     /// Движение к указанной координате
+void move_forward(uint16_t distance);   /// Движение вперед на указанное расстояние
 
-void init_periphery();                  // Инициализация всей переферии
+void init_periphery();                  /// Инициализация всей переферии
 
 void move_with_obstacle_avoidance(int16_t x, int16_t y);
 

@@ -1,6 +1,7 @@
-/* 
- * File:   robot_control.c
- */
+/** 
+* @file robot_control.c
+* @brief Implementation of robot control system
+*/
 
 /* Описание системы управления
  * Система управления строится на 2 базовых действиях:
@@ -35,15 +36,17 @@
 #include "robot_test.h"
 #include "string.h" // для memcpy
 
+/// Исходные данные
 enum Initial_data
 {
-    ROBOT_START_MIN_SPEED = 30,     // Исходное значение минимальной скорости, duty_cycle
-    ROBOT_START_MAX_SPEED = 70,     // Исходное значение максимальной скорости, duty_cycle
-    ROBOT_START_ACCELERATION = 1,   // Исходное значение ускорения duty_cycle/(50мс)
-    ROBOT_START_DECELERATION = 1,   // Исходное значение замедления duty_cycle/(50мс)
+	ROBOT_START_MIN_SPEED = 30,		///< Исходное значение минимальной скважности, duty_cycle
+	ROBOT_START_MAX_SPEED = 70,		///< Исходное значение максимальной скважности, duty_cycle
+	ROBOT_START_ACCELERATION = 1,	///< Исходное значение ускорения duty_cycle/(50мс)
+	ROBOT_START_DECELERATION = 1,	///< Исходное значение замедления duty_cycle/(50мс)
 };
 
 
+/// Направление движения
 typedef enum 
 {
     MOVE_FORWARD = 0,
@@ -52,6 +55,7 @@ typedef enum
 }Movement_t;
 
 
+/// Результаты сканирования пространства
 typedef enum 
 {
     SECTOR_CLEAR = 0,
@@ -60,48 +64,53 @@ typedef enum
 }Result_of_scan_t;
 
 
+/// Калибровочные константы
 enum Calibration
 {
-    // Характеристики робота (ширина 28, длина 28):
+	/// Характеристики робота (ширина 28, длина 28):
     ROBOT_INTERNAL_RADIUS = 14,
     ROBOT_EXTERNAL_RADIUS = 20,
     ROBOT_SAFETY_CORRIDOR_RADIUS = 30,
     ROBOT_INTERNAL_DIAMETER = 28,
     ROBOT_EXTERNAL_DIAMETER = 40,
     ROBOT_SAFETY_CORRIDOR_DIAMETER = 60,
-    // Характеристики энкодера:
+	/// Характеристики энкодера:
     PULSES_IN_360_DEGREE_COUNTER_CLOCKWISE_ROTATION = 720,
     PULSES_IN_360_DEGREE_CLOCKWISE_ROTATION = 720,
     PULSES_IN_CM = 9, // в теории (если коэф. сцепления = 1) = 5.79, на практике хорошо будет 8.5
-    // Характеристики дальномера:
-    RANGEFINDER_ANGLE = 15,
-    RANGEFINDER_HALF_ANGLE = 7,
-    RANGEFINDER_MAX_DISTANCE = 1000, // 100 см (по datasheet 4 - 4.5 метра)
-    // Другие характеристики:
-    OBSTACLE_DANGEROUS_DISTANCE = 50,  // 50 см
+	/// Характеристики дальномера:
+	RANGEFINDER_ANGLE = 15,
+	RANGEFINDER_HALF_ANGLE = 7,
+	RANGEFINDER_MAX_DISTANCE = 1000,    ///< 100 см (по datasheet 4 - 4.5 метра)
+	/// Другие характеристики:
+	OBSTACLE_DANGEROUS_DISTANCE = 50,   ///< 50 см
 };
 
-// Сканирование пространства:
+/// Сканирование пространства
 enum
 {
-    MAX_ANGLE_OF_ROTATION_WHEN_MEASURE = 45,    // 45 градусов
-    ANGLE_OF_ROTATION_WHEN_MEASURE = 5,         // 5 градусов
-    NUMBER_OF_ROTATIONS = 9,                    // 45/5
-    NUMBER_OF_ROTATIONS_LEFT = 9,               // 45/5
-    NUMBER_OF_ROTATIONS_RIGHT = 9,              // 45/5
-    NUMBER_OF_MEASUREMENTS_LEFT = 10,           // [-MAX : ITER : 0] = 45/5 + 1
-    NUMBER_OF_MEASUREMENTS_RIGHT = 10,          // [0 : ITER : +MAX] = 45/5 + 1
+    MAX_ANGLE_OF_ROTATION_WHEN_MEASURE = 45,    ///< 45 градусов
+    ANGLE_OF_ROTATION_WHEN_MEASURE = 5,         ///< 5 градусов
+    NUMBER_OF_ROTATIONS = 9,                    ///< 45/5
+    NUMBER_OF_ROTATIONS_LEFT = 9,               ///< 45/5
+    NUMBER_OF_ROTATIONS_RIGHT = 9,              ///< 45/5
+    NUMBER_OF_MEASUREMENTS_LEFT = 10,           ///< [-MAX : ITER : 0] = 45/5 + 1
+    NUMBER_OF_MEASUREMENTS_RIGHT = 10,          ///< [0 : ITER : +MAX] = 45/5 + 1
     
-    RADIUS_OF_OBSTACLE_SEARCH = 40,             // 60 см
-    RADIUS_OF_MOVEMENT = 20,                    // 40 см
+    RADIUS_OF_OBSTACLE_SEARCH = 40,             ///< 60 см
+    RADIUS_OF_MOVEMENT = 20,                    ///< 40 см
 };
 
+
+/// Декартовы координаты цели
 typedef struct 
 {
     int16_t x;
     int16_t y;
 } Target_point;
 
+
+/// Информация о препятствии
 typedef struct 
 {
     int16_t BorderLeft;
@@ -147,15 +156,15 @@ static uint8_t distanceToSafetyCorridor[NUMBER_OF_MEASUREMENTS_LEFT] =
 
 
 /****************************** PRIVATE FUNCTION ******************************/
-/* 
- * @brief Расчет угла поворота по длинам двух катетов
- * @param dx - катет по горизонтали
- * @param dy - катет по вертикали
- * @return angle - угол в диапазоне [-180; +180] градусов
- */
+/**
+* @brief Расчет угла поворота по длинам двух катетов
+* @param dx - катет по горизонтали
+* @param dy - катет по вертикали
+* @return angle - угол в диапазоне [-180; +180] градусов
+*/
 int16_t calculate_angle(int16_t dx, int16_t dy)
 {
-    // Избегаем деления на ноль:
+    /// Избегаем деления на ноль:
     if (dy == 0)
     {
         if (dx > 0)
@@ -176,31 +185,33 @@ int16_t calculate_angle(int16_t dx, int16_t dy)
         }
         return 180;
     }
-    // Основной расчет:
+    /// Основной расчет:
     int16_t angle = atan( abs_double((float)dx/dy) );
-    if (dx > 0 && dy < 0)       // 4-ый квадрант
+    if (dx > 0 && dy < 0)       /// 4-ый квадрант
         angle = 180 - angle;
-    else if (dx < 0 && dy < 0)  // 3-ий квадрант
+    else if (dx < 0 && dy < 0)  /// 3-ий квадрант
         angle -= 180;
-    else if (dx < 0 && dy > 0)  // 2-ой квадрант
+    else if (dx < 0 && dy > 0)  /// 2-ой квадрант
         angle = -angle;
-    else                        // 1-ый квадрант
+    else                        /// 1-ый квадрант
         angle = angle;
 
     return angle;
 }
 
-/* 
- * @brief Расчет гипатенузы по двум катетам
- */
+/** 
+* @brief Расчет гипатенузы по двум катетам
+* @param dx - катет по горизонтали
+* @param dy - катет по вертикали
+*/
 uint16_t calculate_distance(int16_t dx, int16_t dy)
 {
     return sqrt(dx*dx + dy*dy);
 }
 
-/* 
- * @brief Получить медианное значение среди трех измерений дальности
- */
+/** 
+* @brief Получить медианное значение среди трех измерений дальности
+*/
 uint16_t getMedianRange()
 {
     uint16_t range_1 = rangefinder_do();
@@ -224,10 +235,10 @@ uint16_t getMedianRange()
 }
 
 
-/* 
- * @brief Определение массива показаний дальномера слева на 45 градусов от курсового угла
- * @note Обратно не поворачиваем
- */
+/** 
+* @brief Определение массива показаний дальномера слева на 45 градусов от курсового угла
+* @note Обратно не поворачиваем
+*/
 void measure_left()
 {
     uint16_t* ptrArr = arrRangesLeft;
@@ -241,10 +252,10 @@ void measure_left()
 }
 
 
-/* 
- * @brief Определение массива показаний дальномера справа на 45 градусов от курсового угла
- * @note Обратно не поворачиваем
- */
+/** 
+* @brief Определение массива показаний дальномера справа на 45 градусов от курсового угла
+* @note Обратно не поворачиваем
+*/
 void measure_right()
 {
     uint16_t* ptrArr = arrRangesRight;
@@ -258,10 +269,10 @@ void measure_right()
 }
 
 
-/* 
- * @brief Определение массива показаний дальномера справа и слева от курсового угла
- * @note С поворотом обратно
- */
+/** 
+* @brief Определение массива показаний дальномера справа и слева от курсового угла
+* @note С поворотом обратно
+*/
 void measure()
 {
     measure_left();
@@ -271,22 +282,24 @@ void measure()
 }
 
 
-/* 
- * @brief 
- * @param
- * @return
- */
+/** 
+* @brief Определение, было ли обнаружено при сканировании препятствие
+* @param pDist - указатель на массив расстояний
+* @param pSafety - указатель на массив максимальных расстояний, при которых считается,
+что препятствия нет
+* @return 1, если препятствие обнаружено, иначе 0
+*/
 uint8_t is_it_obstacle(uint16_t* pDist, uint8_t* pSafety)
 {
     return ( ( *pDist < *pSafety ) && ( *pDist < RADIUS_OF_OBSTACLE_SEARCH ) );
 }
 
 
-/* 
- * @brief Анализ массива расстояний, полученных от дальномера
- * @return OBSTACLE_TO_THE_LEFT или OBSTACLE_TO_THE_RIGHT, если обнаружено препятствие, 
-   иначе SECTOR_CLEAR
- */
+/** 
+* @brief Анализ массива расстояний, полученных от дальномера
+* @return OBSTACLE_TO_THE_LEFT или OBSTACLE_TO_THE_RIGHT, если обнаружено препятствие, 
+иначе SECTOR_CLEAR
+*/
 Result_of_scan_t where_is_obstacle()
 {
     enum
@@ -363,15 +376,15 @@ Result_of_scan_t where_is_obstacle()
 }
 
 
-/* 
- * @brief Проверка на совпадение координат робота и цели
- * @return 1, если координаты совпадают с небольшой погрешностью, иначе 0
- */
+/**
+* @brief Проверка на совпадение координат робота и цели
+* @return 1, если координаты совпадают с небольшой погрешностью, иначе 0
+*/
 uint8_t is_robot_in_target()
 {
     enum
     {
-        ALLOWABLE_FAULT = 5, // 5 см
+        ALLOWABLE_FAULT = 5, ///< 5 см
     };
     int16_t dx, dy;
     dx = abs_16( target.x - robot.x );
@@ -383,10 +396,10 @@ uint8_t is_robot_in_target()
 }
 
 
-/* 
- * @brief Плавное увеличение значения текущей скорости робота
- * @return 1, если максимальная скорость достигнута, иначе 0
- */
+/** 
+* @brief Плавное увеличение значения текущей скорости робота
+* @return 1, если максимальная скорость достигнута, иначе 0
+*/
 uint8_t smooth_increase_current_speed()
 {
     if (robot.currentSpeed < robot.maxSpeed)
@@ -406,8 +419,8 @@ uint8_t smooth_increase_current_speed()
 
 
 /* 
- * @brief Плавное уменьшение значения текущей скорости робота
- */
+* @brief Плавное уменьшение значения текущей скорости робота
+*/
 void smooth_decrease_current_speed()
 {
     if (robot.currentSpeed > robot.minSpeed)
@@ -421,24 +434,24 @@ void smooth_decrease_current_speed()
 }
 
 
-/* 
- * @brief Плавное изменение значения текущей скорости робота
- * Процесс изменения скорости робота делится на 4 этапа:
- * 1. ROBOT_ACCELERATION_PROCESS
- * Происходит увеличение скорости робота с значения robot.speedMin до robot.speedMax.
- * Этот процесс заканчивается двумя способами:
- * - если робот достигает максимальной скорости => устанавливается статус ROBOT_ACCELERATION_STOP;
- * - если кол-во импульсов переваливает значение половины необходимых.
- * 2. ROBOT_ACCELERATION_STOP
- * На этом этапе скорость робота не меняется и остается максимальной.
- * Этот процесс заканчивается, если кол-во импульсов переваливает значение половины необходимых.
- * 3. ROBOT_DECELERATION_STOP
-  * На этом этапе скорость робота не меняется и остается максимальной.
- * Этот процесс длится ровно столько же, сколько длился 2-ой этап.
- * 4. ROBOT_DECELERATION_PROCESS
- * Происходит уменьшение скорости робота до значения robot.speedMin.
- * Процесс заканчивается, когда кол-во импульсов достигает необходимого.
- */
+/** 
+* @brief Плавное изменение значения текущей скорости робота
+* Процесс изменения скорости робота делится на 4 этапа:
+* 1. ROBOT_ACCELERATION_PROCESS
+* Происходит увеличение скорости робота с значения robot.speedMin до robot.speedMax.
+* Этот процесс заканчивается двумя способами:
+* - если робот достигает максимальной скорости => устанавливается статус ROBOT_ACCELERATION_STOP;
+* - если кол-во импульсов переваливает значение половины необходимых.
+* 2. ROBOT_ACCELERATION_STOP
+* На этом этапе скорость робота не меняется и остается максимальной.
+* Этот процесс заканчивается, если кол-во импульсов переваливает значение половины необходимых.
+* 3. ROBOT_DECELERATION_STOP
+* На этом этапе скорость робота не меняется и остается максимальной.
+* Этот процесс длится ровно столько же, сколько длился 2-ой этап.
+* 4. ROBOT_DECELERATION_PROCESS
+* Происходит уменьшение скорости робота до значения robot.speedMin.
+* Процесс заканчивается, когда кол-во импульсов достигает необходимого.
+*/
 void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
 {
     enum
@@ -450,7 +463,7 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
     };
     static uint8_t statusOfChange = ROBOT_ACCELERATION_PROCESS;
     
-    // Ускорение - первые 2 этапа:
+    /// Ускорение - первые 2 этапа:
     if(nowPulses < (needPulses >> 1) )
     {
         if( statusOfChange == ROBOT_ACCELERATION_PROCESS)
@@ -465,7 +478,7 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
             statusOfChange = ROBOT_ACCELERATION_PROCESS;
     }
     
-    // Замедление - последние 2 этапа:
+    /// Замедление - последние 2 этапа:
     else
     {
         switch(statusOfChange)
@@ -496,22 +509,22 @@ void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
     }
 }
 
-/* 
- * @brief Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
- * двигателей с помощью ПИ регулятора.
- * @note Скорость левого двигателя уменьшается на robot.speedDifference.
- * @note Скорость правого двигателя увеличивается на robot.speedDifference.
- * @note Данная функция только меняет значение robot.speedDifference.
- * @note Стоит быть начеку, чтобы фактическая мощность (скажность) не превысила 100%
- */
+/** 
+* @brief Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
+* двигателей с помощью ПИ регулятора.
+* @note Скорость левого двигателя уменьшается на robot.speedDifference.
+* @note Скорость правого двигателя увеличивается на robot.speedDifference.
+* @note Данная функция только меняет значение robot.speedDifference.
+* @note Стоит быть начеку, чтобы фактическая мощность (скажность) не превысила 100%
+*/
 void PI_regulator()
 {
-    // Константы, полученные эмпирическим путем:
+    /// Константы, полученные эмпирическим путем:
     const uint8_t PULSES_HYSTERESIS = 0;
     const float P_REGULATOR = 1;
     const float I_REGULATOR = 1;
     
-    // Основной алгоритм:
+    /// Основной алгоритм:
     int16_t leftPulses = abs_16( encoder_left_get_pulses() );
     int16_t rightPulses = abs_16( encoder_right_get_pulses() );
     static float integralComponent = 0;
@@ -531,11 +544,11 @@ void PI_regulator()
 }
 
 
-/* 
- * @brief Обновление скорости робота с учетом влияния ПИ-регулятора и плавного
- * изменения скорости.
- * @note скорость робота в любом случае остается в интервале [0; maxSpeed]
- */
+/** 
+* @brief Обновление скорости робота с учетом влияния ПИ-регулятора и плавного
+* изменения скорости.
+* @note скорость робота в любом случае остается в интервале [0; maxSpeed]
+*/
 void update_robot_speed(Movement_t type)
 {
     //#define TEST_MODE       // activate timer
@@ -595,10 +608,10 @@ void update_robot_speed(Movement_t type)
 }
 
 
-/* 
- * @brief Пассивная проверка на наличие препятствия
- * @note Не влияет на движение робота
- */
+/** 
+* @brief Пассивная проверка на наличие препятствия
+* @note Не влияет на движение робота
+*/
 void passive_obstacle_check()
 {
     if (timer_report(&timer) != TIMER_WORKING)
@@ -610,11 +623,11 @@ void passive_obstacle_check()
 }
 
 
-/* 
- * @brief Активная проверка на наличие препятствия
- * @note робот останавливается во время проверки
- * @param ptrDistance - указатель на расстояние, необходимое проехать
- */
+/** 
+* @brief Активная проверка на наличие препятствия
+* @note робот останавливается во время проверки
+* @param ptrDistance - указатель на расстояние, необходимое проехать
+*/
 void active_obstacle_check(uint16_t* ptrDistance)
 {
     if (robot.range < OBSTACLE_DANGEROUS_DISTANCE)
@@ -634,9 +647,9 @@ void active_obstacle_check(uint16_t* ptrDistance)
 
 /****************************** PUBLIC FUNCTION *******************************/
 /* 
- * @brief Поворот на указанный угол c плавным изменением скорости
- * @param angle [-30к; + 30к]
- */
+* @brief Поворот на указанный угол c плавным изменением скорости
+* @param angle [-30к; + 30к]
+*/
 void turn_around_by(int16_t angle)
 {
     int16_t nowPulses = 0;
@@ -675,9 +688,9 @@ void turn_around_by(int16_t angle)
 }
 
 /* 
- * @brief Поворот к указанному углу по кратчайшему направлению
- * @param angle - курсовой угол, который должен быть у робота
- */
+* @brief Поворот к указанному углу по кратчайшему направлению
+* @param angle - курсовой угол, который должен быть у робота
+*/
 void turn_around_to(int16_t angle)
 {
     int16_t short_angle = angle - robot.angle;
@@ -692,25 +705,25 @@ void turn_around_to(int16_t angle)
     turn_around_by(short_angle);
 }
 
-/* 
- * @brief Прямолинейное движение вперед на указанное расстояние (в см)
- *
- * @note В цикле выполяются следующие 4 действия, пока среднее кол-во импульсов
- * на энкодерах не будет больше или равно, чем нужно.
- * 1. Пассивная проверка на наличие препятствие, т.е. сравнение показания
- * дальномера с критическим значением при включенном двигателе. Если датчик
- * обнаружит препятствие, то запускается активная проверка.
- * 2. Активная проверка, т.е. полная остановка двигателя с выполнением 3-ех
- * считываний показаний дальномера. Если медианное значение дальности среди
- * считанных значений меньше критического, тогда цикл останавливается, а 
- * координаты робота обновляются фактическими. Иначе - продолжаем цикл.
- * 3. Плавное изменение скорости двигателей от минимальной к максимальной и
- * обратно.
- * 4. Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
- * двигателей с помощью ПИ регулятора.
- 
- * @param distance - расстояние (в см)
- */
+/**
+* @brief Прямолинейное движение вперед на указанное расстояние (в см)
+*
+* @note В цикле выполяются следующие 4 действия, пока среднее кол-во импульсов
+* на энкодерах не будет больше или равно, чем нужно.
+* 1. Пассивная проверка на наличие препятствие, т.е. сравнение показания
+* дальномера с критическим значением при включенном двигателе. Если датчик
+* обнаружит препятствие, то запускается активная проверка.
+* 2. Активная проверка, т.е. полная остановка двигателя с выполнением 3-ех
+* считываний показаний дальномера. Если медианное значение дальности среди
+* считанных значений меньше критического, тогда цикл останавливается, а 
+* координаты робота обновляются фактическими. Иначе - продолжаем цикл.
+* 3. Плавное изменение скорости двигателей от минимальной к максимальной и
+* обратно.
+* 4. Сохранение прямолинейности движения за счет подстроки скважности ШИМ 
+* двигателей с помощью ПИ регулятора.
+*
+* @param distance - расстояние (в см)
+*/
 void move_forward(uint16_t distance)
 {
     const int16_t needPulses = PULSES_IN_CM*distance;
@@ -736,10 +749,10 @@ void move_forward(uint16_t distance)
     motors_stop();
 }
 
-/* 
- * @brief Прямолинейное движение к указанной координате
- * @param x, y - декартовы координаты
- */
+/** 
+* @brief Прямолинейное движение к указанной координате
+* @param x, y - декартовы координаты
+*/
 void move_to(int16_t x, int16_t y)
 {
     target.x = x;
@@ -753,9 +766,9 @@ void move_to(int16_t x, int16_t y)
     }
 }
 
-/* 
- * @brief Инициализация всей переферии
- */
+/** 
+* @brief Инициализация всей переферии
+*/
 void init_periphery() 
 {
     GPIO_init();
@@ -775,9 +788,9 @@ void init_periphery()
 }
 
 
-/* 
- * @brief Движение без столкновения с препятствиями
- */
+/** 
+* @brief Движение без столкновения с препятствиями
+*/
 void move_with_obstacle_avoidance(int16_t x, int16_t y)
 {
     target.x = x;
@@ -795,7 +808,7 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
         measure_left();
         log_transmit();
         
-        // Объезжаем препятствие справа
+        /// Объезжаем препятствие справа
         if( where_is_obstacle() == OBSTACLE_TO_THE_LEFT )
         {
             //uint16_t borderLeft = obstacle.BorderLeft;
@@ -820,7 +833,7 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
                 move_forward(RADIUS_OF_MOVEMENT << 1);
             }
         }
-        // Объезжаем препятствие слева
+        /// Объезжаем препятствие слева
         else if( where_is_obstacle() == OBSTACLE_TO_THE_RIGHT )
         {
             uint16_t borderLeft = obstacle.BorderLeft;
@@ -844,7 +857,7 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
                 move_forward(RADIUS_OF_MOVEMENT << 1);
             }
         }
-        // Едем прямо
+        /// Едем прямо
         else
         {
             turn_around_by(45);
@@ -856,9 +869,9 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
     }
 }
 
-/* 
- * @brief Передача по uart информацию о роботе (первые 10 байт структуры robot)
- */
+/** 
+* @brief Передача по uart информацию о роботе (первые 10 байт структуры robot)
+*/
 void log_transmit()
 {
     char buf[12];

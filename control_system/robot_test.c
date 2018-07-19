@@ -1,21 +1,21 @@
-/* 
- * File:   robot_test.c
- */
-
+/**
+* @file robot_test.c
+* @brief Implementation of robot test
+*/
 #include "robot_test.h"
 #include "adc.h"
 #include "math.h"
 #include "text.h"
 
-// Глобальные и статические переменные:
+/// Глобальные и статические переменные:
 extern UART_module* debug;
 extern Timer timer; 
 extern Timer timerSub; 
 extern Robot_data robot;
 
-/* 
- * @brief Тест работы модуля motor_control на разных мощностях и в разных направлениях
- */
+/** 
+* @brief Тест работы модуля motor_control на разных мощностях и в разных направлениях
+*/
 void test_motor_control() 
 {
     enum 
@@ -38,9 +38,9 @@ void test_motor_control()
     motors_stop();
 }
 
-/* 
- * @brief Тест работы модуля uart
- */
+/** 
+* @brief Тест работы модуля uart
+*/
 void test_uart() 
 {
     UART_transmit(debug, "Case 1. Test UART_transmit() is succeed\n\r", 41);
@@ -49,9 +49,9 @@ void test_uart()
     for (count = 0; count < 3000000; count++);
 }
 
-/* 
- * @brief Тест модуля software_timer
- */
+/**
+* @brief Тест модуля software_timer
+*/
 void test_software_timer() 
 {
     int8_t count = -5;
@@ -86,9 +86,9 @@ void test_software_timer()
     }
 }
 
-/* 
- * @brief Тест работы модуля encoder
- */
+/** 
+* @brief Тест работы модуля encoder
+*/
 void test_encoder() 
 {
     int32_t pulsesLeft;
@@ -119,9 +119,9 @@ void test_encoder()
     motors_stop();
 }
 
-/* 
- * @brief Тест работы модуля rangefinder
- */
+/** 
+* @brief Тест работы модуля rangefinder
+*/
 void test_rangefinder()
 {
     rangefinder_give_impulse();
@@ -139,9 +139,9 @@ void test_rangefinder()
     while(timer_report(&timer) == TIMER_WORKING);
 }
 
-/* 
- * @brief Тест поворота двигателя
- */
+/** 
+* @brief Тест поворота двигателя
+*/
 void test_turn_around_by()
 {
     turn_around_by(360);
@@ -180,9 +180,9 @@ void test_turn_around_by()
 }
 
 
-/* 
- * @brief Тест движения робота к указанным координатам
- */
+/**
+* @brief Тест движения робота к указанным координатам
+*/
 void test_move_to()
 {
     move_to(10, 0);
@@ -201,9 +201,9 @@ void test_move_to()
 }
 
 
-/* 
- * @brief Тест сканирования пространства
- */
+/** 
+* @brief Тест сканирования пространства
+*/
 void test_measure()
 {
     measure();
@@ -211,9 +211,9 @@ void test_measure()
 }
 
 
-/* 
- * @brief Тест плавного изменения скорости
- */
+/** 
+* @brief Тест плавного изменения скорости
+*/
 void test_smooth_change_speed()
 {
     robot.minSpeed = 25;
@@ -223,9 +223,9 @@ void test_smooth_change_speed()
 }
 
 
-/* 
- * @brief Тест работы ацп
- */
+/** 
+* @brief Тест работы ацп
+*/
 void test_adc()
 {
     if (timer_report(&timer) != TIMER_WORKING)
