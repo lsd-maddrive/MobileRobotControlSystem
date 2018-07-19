@@ -31,6 +31,7 @@
 
 #include "robot_control.h"
 #include "pid_regulator.h"
+#include "smooth_change_speed.h"
 #include "adc.h"
 #include "math.h"
 #include "text.h"
@@ -42,8 +43,6 @@ enum Initial_data
 {
 	ROBOT_START_MIN_SPEED = 30,		///< Исходное значение минимальной скважности, duty_cycle
 	ROBOT_START_MAX_SPEED = 70,		///< Исходное значение максимальной скважности, duty_cycle
-	ROBOT_START_ACCELERATION = 1,	///< Исходное значение ускорения duty_cycle/(50мс)
-	ROBOT_START_DECELERATION = 1,	///< Исходное значение замедления duty_cycle/(50мс)
 };
 
 
@@ -124,8 +123,6 @@ extern UART_module* debug;
 Timer timer; 
 Timer timerSub;
 static Timer timerForTest;
-static Timer timerForSmoothChangeSpeedDelay;
-static Timer timerForSmoothChangeSpeedDeadZone;
 static uint16_t arrRangesLeft[NUMBER_OF_MEASUREMENTS_LEFT];
 static uint16_t arrRangesRight[NUMBER_OF_MEASUREMENTS_RIGHT];
 Robot_data robot =
@@ -137,8 +134,6 @@ Robot_data robot =
     
     .minSpeed = ROBOT_START_MIN_SPEED,
     .maxSpeed = ROBOT_START_MAX_SPEED,
-    .acceleration = ROBOT_START_ACCELERATION,
-    .deceleration = ROBOT_START_DECELERATION
 };
 static Target_point target = 
 {
@@ -398,120 +393,6 @@ uint8_t is_robot_in_target()
 
 
 /** 
-* @brief Плавное увеличение значения текущей скорости робота
-* @return 1, если максимальная скорость достигнута, иначе 0
-*/
-uint8_t smooth_increase_current_speed()
-{
-    if (robot.currentSpeed < robot.maxSpeed)
-    {
-        if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
-        {
-            timer_start_ms(&timerForSmoothChangeSpeedDelay, 50);
-            robot.currentSpeed += robot.acceleration;
-        }
-    }
-    else
-    {
-        return 1;
-    }
-    return 0;
-}
-
-
-/* 
-* @brief Плавное уменьшение значения текущей скорости робота
-*/
-void smooth_decrease_current_speed()
-{
-    if (robot.currentSpeed > robot.minSpeed)
-    {
-        if( timer_report(&timerForSmoothChangeSpeedDelay) != TIMER_WORKING )
-        {
-            timer_start_ms(&timerForSmoothChangeSpeedDelay, 50);
-            robot.currentSpeed -= robot.deceleration;
-        }
-    }
-}
-
-
-/** 
-* @brief Плавное изменение значения текущей скорости робота
-* Процесс изменения скорости робота делится на 4 этапа:
-* 1. ROBOT_ACCELERATION_PROCESS
-* Происходит увеличение скорости робота с значения robot.speedMin до robot.speedMax.
-* Этот процесс заканчивается двумя способами:
-* - если робот достигает максимальной скорости => устанавливается статус ROBOT_ACCELERATION_STOP;
-* - если кол-во импульсов переваливает значение половины необходимых.
-* 2. ROBOT_ACCELERATION_STOP
-* На этом этапе скорость робота не меняется и остается максимальной.
-* Этот процесс заканчивается, если кол-во импульсов переваливает значение половины необходимых.
-* 3. ROBOT_DECELERATION_STOP
-* На этом этапе скорость робота не меняется и остается максимальной.
-* Этот процесс длится ровно столько же, сколько длился 2-ой этап.
-* 4. ROBOT_DECELERATION_PROCESS
-* Происходит уменьшение скорости робота до значения robot.speedMin.
-* Процесс заканчивается, когда кол-во импульсов достигает необходимого.
-*/
-void smooth_change_current_speed(uint32_t nowPulses, uint32_t needPulses)
-{
-    enum
-    {
-        ROBOT_ACCELERATION_PROCESS = 0,
-        ROBOT_ACCELERATION_STOP = 1,
-        ROBOT_DECELERATION_STOP = 2,
-        ROBOT_DECELERATION_PROCESS = 3,
-    };
-    static uint8_t statusOfChange = ROBOT_ACCELERATION_PROCESS;
-    
-    /// Ускорение - первые 2 этапа:
-    if(nowPulses < (needPulses >> 1) )
-    {
-        if( statusOfChange == ROBOT_ACCELERATION_PROCESS)
-        {
-            if (smooth_increase_current_speed() )
-            {
-                statusOfChange = ROBOT_ACCELERATION_STOP;
-                timer_start_ms(&timerForSmoothChangeSpeedDeadZone, 30000);
-            }
-        }  
-        else if (statusOfChange != ROBOT_ACCELERATION_STOP )
-            statusOfChange = ROBOT_ACCELERATION_PROCESS;
-    }
-    
-    /// Замедление - последние 2 этапа:
-    else
-    {
-        switch(statusOfChange)
-        {
-            case ROBOT_ACCELERATION_STOP:
-            {
-                uint32_t timeOfDeadZone = timer_get_elapsed_time(&timerForSmoothChangeSpeedDeadZone)*0.001;
-                timer_start_ms(&timerForSmoothChangeSpeedDeadZone, timeOfDeadZone);
-                statusOfChange = ROBOT_DECELERATION_STOP;
-                break;
-            }
-            case ROBOT_DECELERATION_STOP:
-            {
-                if( timer_report(&timerForSmoothChangeSpeedDeadZone) != TIMER_WORKING)
-                    statusOfChange = ROBOT_DECELERATION_PROCESS;
-                break;
-            }
-            case ROBOT_DECELERATION_PROCESS:
-            {
-                smooth_decrease_current_speed();
-                break;
-            }
-            default:
-            {
-                statusOfChange = ROBOT_DECELERATION_PROCESS;
-            }
-        }
-    }
-}
-
-
-/** 
 * @brief Обновление скорости робота с учетом влияния ПИ-регулятора и плавного
 * изменения скорости.
 * @note скорость робота в любом случае остается в интервале [0; maxSpeed]
@@ -629,7 +510,7 @@ void turn_around_by(int16_t angle)
         while(nowPulses < needPulses)
         {
             update_robot_speed(ROTATE_CLOCKWISE);
-            smooth_change_current_speed(nowPulses, needPulses);
+            smooth_change_current_speed(&robot.currentSpeed, nowPulses, needPulses);
             robot.speedRegulator = PI_regulator();
             nowPulses = ( encoder_left_get_pulses() - encoder_right_get_pulses() ) >> 1;
         }
@@ -640,7 +521,7 @@ void turn_around_by(int16_t angle)
         while(nowPulses < needPulses )
         {
             update_robot_speed(ROTATE_COUNTER_CLOCKWISE);
-            smooth_change_current_speed(nowPulses, needPulses);
+            smooth_change_current_speed(&robot.currentSpeed, nowPulses, needPulses);
             robot.speedRegulator = PI_regulator();
             nowPulses = ( encoder_right_get_pulses() - encoder_left_get_pulses() ) >> 1;
         }
@@ -703,7 +584,7 @@ void move_forward(uint16_t distance)
     {
         passive_obstacle_check();
         active_obstacle_check(&distance);
-        smooth_change_current_speed(nowPulses, needPulses);
+        smooth_change_current_speed(&robot.currentSpeed, nowPulses, needPulses);
         //robot.speedRegulator = PI_regulator();
         update_robot_speed(MOVE_FORWARD);
         nowPulses = ( encoder_left_get_pulses() + encoder_right_get_pulses() ) >> 1;
@@ -747,8 +628,7 @@ void init_periphery()
     soft_timer_init(&timer);
     soft_timer_init(&timerForTest);
     soft_timer_init(&timerSub);
-    soft_timer_init(&timerForSmoothChangeSpeedDelay);
-    soft_timer_init(&timerForSmoothChangeSpeedDeadZone);
+    smooth_change_current_speed_init();
     rangefinder_init();
     
     UART_write_string(debug, "Start\n\r");

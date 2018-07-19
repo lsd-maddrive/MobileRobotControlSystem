@@ -33,8 +33,6 @@ typedef struct
     
     uint8_t minSpeed;
     uint8_t maxSpeed;
-    uint8_t acceleration;
-    uint8_t deceleration;
 } Robot_data;
 
 
