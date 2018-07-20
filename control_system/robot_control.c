@@ -354,7 +354,7 @@ void update_robot_speed(Movement_t type)
     } 
     #endif  // TEST_MODE
 
-    int8_t actualSpeed = robot.currentSpeed - robot.speedRegulator;
+    int16_t actualSpeed = robot.currentSpeed - robot.speedRegulator;
     if(actualSpeed > robot.maxSpeed)
         actualSpeed = robot.maxSpeed;
     else if(actualSpeed < 0)
@@ -583,7 +583,8 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
             uint16_t borderRight = obstacle.BorderRight;
             turn_around_by(+135);
 
-            test_measure(); //measure();
+            measure();
+			log_transmit();
             
             if( where_is_obstacle() != SECTOR_CLEAR)
                 break;
@@ -608,7 +609,8 @@ void move_with_obstacle_avoidance(int16_t x, int16_t y)
             //uint16_t borderRight = obstacle.BorderRight;
             turn_around_by(-45);
 
-            test_measure(); //measure();
+            measure();
+			log_transmit();
             
             if( where_is_obstacle() != SECTOR_CLEAR)
                 break;

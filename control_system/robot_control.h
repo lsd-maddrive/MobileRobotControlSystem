@@ -36,15 +36,13 @@ typedef struct
 } Robot_data;
 
 
-
-void turn_around_to(int16_t angle);     /// Поворот на указанный угол
+void measure();
+void turn_around_by(int16_t angle);     /// Поворот на указанный угол
+void turn_around_to(int16_t angle);     /// Поворот к указанному углу
 void move_to(int16_t x, int16_t y);     /// Движение к указанной координате
 void move_forward(uint16_t distance);   /// Движение вперед на указанное расстояние
-
-void init_periphery();                  /// Инициализация всей переферии
-
 void move_with_obstacle_avoidance(int16_t x, int16_t y);
-
+void init_periphery();                  /// Инициализация всей переферии
 void log_transmit();
 
 #endif	/* ROBOT_CONTROL_H */

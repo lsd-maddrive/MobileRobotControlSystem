@@ -3,6 +3,7 @@
 * @brief Implementation of robot test
 */
 #include "robot_test.h"
+#include "robot_control.h"
 #include "adc.h"
 #include "math.h"
 #include "text.h"
