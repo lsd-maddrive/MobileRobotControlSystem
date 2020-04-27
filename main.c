@@ -52,26 +52,15 @@ int main(void)
     init_periphery();
     Timer logPeriod; 
     soft_timer_init(&logPeriod);
-    //test_turn_around_by();        // успешно работает
-    //test_move_to();               // успешно работает
-    //test_measure();               // с горем пополам работает
-    move_forward(75);             // успешно работает
-    //test_move_to();               // успешно работает
-    //move_with_obstacle_avoidance(0, 50);
-    //turn_around_by(360);
+    move_forward(75);
+    move_with_obstacle_avoidance(0, 50);
     while(1)
     {
-        //test_motor_control();     // успешно работает
-        //test_uart();              // успешно работает
-        //test_software_timer();    // успешно работает
-        //test_rangefinder();       // успешно работает
-        //test_encoder();           // успешно работает
         test_adc();
         
         if(timer_report(&logPeriod) != TIMER_WORKING)
         {
             timer_start_ms(&logPeriod, 500);
-            //log_transmit();
         }
         
     }
